@@ -111,6 +111,13 @@
   function route() {
     var r = parseHash();
     window.scrollTo(0, 0);
+    /* 对局 / 看板 / 玩家角色卡 交给 game.js */
+    if ((r.p === 'game' || r.p === 'board' || r.p === 'pc') && window.BOTCGame) {
+      window.BOTCGame.route(r);
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === r.p); });
+      $('#q').blur();
+      return;
+    }
     switch (r.p) {
       case 'home': renderHome(); break;
       case 'roles': renderRoles(); break;
@@ -183,6 +190,7 @@
 
       '<div class="sec-title"><h2>常用工具</h2></div>' +
       '<div class="grid2">' +
+      '<div class="tile" data-go="#/game"><div class="em">🕯️</div><div class="t">开局 · 线上魔典</div><div class="d">发牌 / 夜晚 / 投票 / 看板</div></div>' +
       '<div class="tile" data-go="#/jinxes"><div class="em">⚔️</div><div class="t">相克规则</div><div class="d">' + D.meta.jinxCount + ' 条，可搜索</div></div>' +
       '<div class="tile" data-go="#/night"><div class="em">🌙</div><div class="t">夜晚行动顺序</div><div class="d">首夜 / 其他夜晚</div></div>' +
       '<div class="tile" data-go="#/quiz"><div class="em">🎯</div><div class="t">答题练习</div><div class="d">能力↔角色 / 相克</div></div>' +
