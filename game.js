@@ -19,14 +19,17 @@
   }
   var LS = {
     get: function (k, d) { try { var v = localStorage.getItem('botcg_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-    set: function (k, v) { try { localStorage.setItem('botcg_' + k, JSON.stringify(v)); } catch (e) { } }
+    set: function (k, v) { try { localStorage.setItem('botcg_' + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   };
 
   /* ================= 状态 ================= */
   var G = LS.get('game', null);
-  var UI = { sheetSeat: -1, vote: null, timer: null, timerLeft: 180, timerMin: 3, newCfg: null };
+  var UI = { sheetSeat: -1, vote: null, timer: null, timerLeft: 180, timerMin: 3, newCfg: null,
+    orderKey: null, orderAll: false, lsWarn: false };
 
-  function save() { LS.set('game', G); }
+  function save() { if (!LS.set('game', G)) UI.lsWarn = true; }
+  try { localStorage.setItem('botcg_probe', '1'); localStorage.removeItem('botcg_probe'); }
+  catch (e) { UI.lsWarn = true; }
   function aliveSeats() { return G.seats.filter(function (s) { return s.alive; }); }
   function seat(n) { for (var i = 0; i < G.seats.length; i++) if (G.seats[i].n === n) return G.seats[i]; return null; }
   function roleOf(s) { return s && s.role ? byId[s.role] : null; }
@@ -155,8 +158,9 @@
 
   function startGame() {
     var cfg = UI.newCfg;
-    if (!cfg.roles) return;
-    var seats = cfg.roles.map(function (rid, i) {
+    if (!cfg || !cfg.roles) { alert('请先点击「随机发牌」'); return; }
+    try {
+      var seats = cfg.roles.map(function (rid, i) {
       return {
         n: i + 1, name: (cfg.names[i] || '玩家' + (i + 1)).trim() || ('玩家' + (i + 1)),
         role: rid, alive: true, traveler: false,
@@ -177,11 +181,130 @@
       night: 'first', nightStep: 0, nightActs: {}, seats: seats, log: [], noms: [], winner: null, startedAt: Date.now()
     };
     log('创建对局：' + (EDNAME(cfg.ed)) + ' · ' + cfg.n + ' 人' + (cfg.travelers.length ? ' + ' + cfg.travelers.length + ' 旅行者' : ''), 'setup');
-    save();
-    UI.newCfg = null;
-    location.hash = '#/game';
+      save();
+      UI.newCfg = null;
+      UI.orderKey = null;
+      /* 兜底：先直接渲染魔典，再同步 hash，避免部分浏览器 hashchange 不触发导致"点不开" */
+      renderGrimoire();
+      if (location.hash !== '#/game') location.hash = '#/game';
+    } catch (err) {
+      alert('开始对局失败：' + (err && err.message ? err.message : err));
+    }
   }
   function EDNAME(id) { var e = D.editions.filter(function (x) { return x.id === id; })[0]; return e ? e.name : id; }
+
+  /* ================= 夜晚行动顺序面板 ================= */
+  function curNightKey() { return (G.phase === 'setup' || G.day === 0) ? 'first' : (G.night || 'first'); }
+
+  function orderRows(key, onlyPresent) {
+    var present = {}; G.seats.forEach(function (s) { if (s.role) present[s.role] = s; });
+    var fb = {}; (G.fabled || []).forEach(function (id) { fb[id] = 1; });
+    var src = D.nightOrder[key] || [];
+    var out = [], gi = 0;
+    src.forEach(function (x) {
+      var inGame = !!present[x.id] || !!fb[x.id];
+      if (onlyPresent && !inGame) return;
+      out.push({ x: x, i: gi, seat: present[x.id] || null, inGame: inGame, fabled: !!fb[x.id] });
+      gi++;
+    });
+    return out;
+  }
+  function actOf(key, i) { return G.nightActs[key + ':' + i] || null; }
+
+  function orderRowsHtml(rows, isCur, key, clickable) {
+    var all = !!UI.orderAll;
+    var step = G.nightStep || 0;
+    return rows.map(function (r) {
+      var rr = byId[r.x.id] || {};
+      var team = rr.team || r.x.team || '';
+      var cls = 'ord';
+      var fin = isCur && r.i < step;
+      if (fin) cls += ' done';
+      if (isCur && r.i === step) cls += ' cur';
+      if (r.seat && !r.seat.alive) cls += ' gone';
+      var act = isCur ? actOf(key, r.i) : null;
+      if (act && act.skip) cls += ' skip';
+      var sub;
+      if (r.seat) sub = r.seat.n + '号 · ' + r.seat.name + (r.seat.alive ? '' : '（已死亡）');
+      else if (r.fabled) sub = '传奇角色 · 本局已启用';
+      else sub = all ? '本局不在场' : '—';
+      var rec = '';
+      if (act && (act.target || act.note || act.skip)) {
+        rec = '<div class="rec">' + (act.skip ? '已跳过' : '') +
+          (act.target ? ' → ' + act.target + '号' : '') +
+          (act.note ? ' ' + esc(act.note) : '') + '</div>';
+      }
+      return '<div class="' + cls + '"' + (clickable ? ' data-gojump="' + r.i + '"' : '') + '>' +
+        '<div class="oi">' + (fin ? '✓' : (r.i + 1)) + '</div>' +
+        '<div class="ob"><div class="on">' + esc(r.x.name) +
+        (team ? ' <span class="tag t-' + team + '">' + esc(TEAMCN[team] || team) + '</span>' : '') +
+        (r.seat && !r.seat.alive ? ' <span class="mk dead">死亡</span>' : '') + '</div>' +
+        '<div class="os">' + esc(sub) + '</div>' + rec + '</div></div>';
+    }).join('');
+  }
+
+  function orderPanelHtml() {
+    var key = UI.orderKey || curNightKey();
+    var all = !!UI.orderAll;
+    var isCur = (G.night === key) && !all;
+    var rows = orderRows(key, !all);
+    var step = G.nightStep || 0;
+    var done = 0;
+    rows.forEach(function (r) { if (isCur && r.i < step) done++; });
+    var body = orderRowsHtml(rows, isCur, key, !all);
+
+    return '<div class="card" style="margin-top:12px;padding:12px 14px">' +
+      '<div class="ftl">夜晚行动顺序 · ' + (key === 'first' ? '首个夜晚' : '首夜之后的夜晚') +
+      (isCur ? '（已完成 ' + done + '/' + rows.length + '）' : '（预览）') + '</div>' +
+      '<div class="ordbar">' +
+      '<button class="chip' + (key === 'first' ? ' on' : '') + '" data-gork="first">首夜顺序</button>' +
+      '<button class="chip' + (key === 'other' ? ' on' : '') + '" data-gork="other">其他夜顺序</button>' +
+      '<button class="chip' + (all ? ' on p' : '') + '" data-gora="1">' + (all ? '只看本局在场' : '显示全部角色') + '</button>' +
+      (isCur ? '<button class="btn" data-gnight="1" style="padding:5px 10px;font-size:12px">去执行 ›</button>' : '') +
+      '</div>' +
+      '<div class="ordlist">' + (body || '<div class="note">没有可显示的顺序</div>') + '</div>' +
+      '<div class="note">' + (all
+        ? '当前为剧本完整顺序，仅供查阅。'
+        : '点击任意一步可直接跳到该步执行；✓ 已完成，红框为当前步。') + '</div></div>';
+  }
+
+  /* ================= 角色状态总览 ================= */
+  function statusTableHtml() {
+    var key = G.night || 'first';
+    var list = nightList();
+    var info = {};
+    list.forEach(function (x, i) {
+      var a = actOf(key, i); if (!a) return;
+      G.seats.forEach(function (s) { if (s.role === x.id) info[s.n] = a; });
+    });
+    var rows = G.seats.map(function (s) {
+      var r = roleOf(s);
+      var mini = '';
+      if (!s.alive) mini += '<i class="mini on">死亡</i>';
+      if (s.st.poison) mini += '<i class="mini ps">中毒</i>';
+      if (s.st.drunk) mini += '<i class="mini dk">醉酒</i>';
+      if (s.st.protect) mini += '<i class="mini pt">保护</i>';
+      if (s.st.red) mini += '<i class="mini rd">红鲱鱼</i>';
+      (s.st.marks || []).forEach(function (m) { mini += '<i class="mini">' + esc(m) + '</i>'; });
+      if (!mini) mini = '<span style="color:var(--text-faint)">正常</span>';
+      var a = info[s.n], night = '';
+      if (a) night = (a.skip ? '已跳过' : '') + (a.target ? ' → ' + a.target + '号' : '') + (a.note ? ' ' + esc(a.note) : '');
+      return '<tr data-gseat="' + s.n + '">' +
+        '<td class="nowrap">' + s.n + '</td>' +
+        '<td class="nowrap' + (s.alive ? '' : ' dead') + '">' + esc(s.name) + '</td>' +
+        '<td class="nowrap' + (s.alive ? '' : ' dead') + '">' + (r ? esc(r.name) : '—') + '</td>' +
+        '<td class="nowrap">' + (r ? '<span class="tag t-' + r.team + '">' + esc(TEAMCN[r.team]) + '</span>' : '') + '</td>' +
+        '<td>' + mini + '</td>' +
+        '<td style="min-width:88px;color:var(--purple)">' + (night || '<span style="color:var(--text-faint)">—</span>') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    return '<div class="card" style="margin-top:12px;padding:12px 14px">' +
+      '<div class="ftl">角色状态总览 · ' + (G.phase === 'night' ? '本夜' : '最近一次夜晚') + '行动记录（点任意一行可修改）</div>' +
+      '<div class="stwrap"><table class="sttable"><thead><tr>' +
+      '<th>座</th><th>玩家</th><th>角色</th><th>阵营</th><th>状态标记</th><th>夜晚记录</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
 
   /* ================= 魔典 ================= */
   function renderGrimoire() {
@@ -218,6 +341,15 @@
         '<div class="sm">' + marks + '</div></div>';
     }).join('') + '</div>';
 
+    if (UI.lsWarn) {
+      html += '<div class="card" style="margin-top:10px;padding:10px 12px;background:#fff6e5;border:1px solid #f0d3a0">' +
+        '<div style="font-size:13px;color:#8a5a1f">⚠ 当前浏览器禁用了本地存储（常见于隐私模式 / 微信内置浏览器），刷新页面会丢失对局。请及时用「导出对局快照」保存。</div></div>';
+    }
+
+    /* 夜晚行动顺序 + 角色状态总览 */
+    html += orderPanelHtml();
+    html += statusTableHtml();
+
     html += '<div class="card" style="margin-top:12px;padding:12px 14px">' +
       '<div class="ftl">阶段控制</div><div class="qbtns">' +
       (G.phase === 'setup' ? '<button class="btn primary" data-gtonight="1">开始夜晚</button>' : '') +
@@ -226,6 +358,7 @@
       (G.phase === 'day' ? '<button class="btn" data-gtonight="1">直接进入夜晚</button>' : '') +
       '<button class="btn" data-glog="1">对局日志</button>' +
       '<button class="btn" data-gboard="1">公开看板（投屏）</button>' +
+      '<button class="btn" data-gnew="1">新建一局</button>' +
       '</div></div>';
 
     if (setupRoles.length && G.phase === 'setup') {
@@ -371,7 +504,9 @@
         '<div style="font-size:16px;font-weight:700;margin-bottom:6px">夜晚流程已完成</div>' +
         '<div class="note">确认所有玩家都已行动后，进入白天。</div>' +
         '<div class="qbtns"><button class="btn primary" data-gendnight="1">进入第 ' + (G.day + 1) + ' 天 · 白天</button>' +
-        '<button class="btn" data-gbackstep="1">上一步</button></div></div>';
+        '<button class="btn" data-gbackstep="1">上一步</button></div>' +
+        '<div class="ordlist" style="margin-top:10px">' + orderRowsHtml(orderRows(G.night, true), true, G.night, true) + '</div>' +
+        '</div>';
       view().innerHTML = html;
       return;
     }
@@ -390,12 +525,17 @@
       (x.reminder ? '<div class="sttip"><b>说书人提示</b>' + esc(x.reminder) + '</div>' : '') +
       '</div>';
 
+    html += '<div class="card" style="margin-top:12px;padding:10px 12px">' +
+      '<div class="ftl">本夜完整行动顺序（点击可跳步）</div>' +
+      '<div class="ordlist">' + orderRowsHtml(orderRows(G.night, true), true, G.night, true) + '</div></div>';
+
     if (s) {
       html += '<div class="card" style="margin-top:12px;padding:12px 14px">' +
         '<div class="ftl">选择目标玩家（记录用）</div>' +
         '<select id="tgt" class="sel">' + G.seats.map(function (p) {
           return '<option value="' + p.n + '"' + (act.target === p.n ? ' selected' : '') + '>' + p.n + '号 ' + esc(p.name) + (p.alive ? '' : '（死亡）') + '</option>';
         }).join('') + '</select>' +
+        '<div id="tgtinfo" class="sttip" style="background:var(--bg-soft);color:var(--text-dim)"></div>' +
         '<div class="ftl">快捷效果（对所选目标生效）</div><div class="chips">' +
         '<button class="chip" data-gneff="poison">标记中毒</button>' +
         '<button class="chip" data-gneff="drunk">标记醉酒</button>' +
@@ -419,6 +559,22 @@
       html += '<div class="note">上一步：' + esc(pv.label || '') + (pv.target ? ' → ' + pv.target + '号' : '') + (pv.note ? '（' + esc(pv.note) + '）' : '') + '</div>';
     }
     view().innerHTML = html;
+    var sel = $('#tgt');
+    if (sel) { sel.addEventListener('change', updateTgtInfo); updateTgtInfo(); }
+  }
+
+  function updateTgtInfo() {
+    var box = $('#tgtinfo'); if (!box) return;
+    var sel = $('#tgt'); if (!sel) return;
+    var s = seat(+sel.value); if (!s) { box.textContent = ''; return; }
+    var r = roleOf(s), t = [s.alive ? '存活' : '已死亡'];
+    if (s.st.poison) t.push('中毒');
+    if (s.st.drunk) t.push('醉酒');
+    if (s.st.protect) t.push('受保护');
+    if (s.st.red) t.push('红鲱鱼');
+    (s.st.marks || []).forEach(function (m) { t.push(m); });
+    box.innerHTML = '<b>' + s.n + '号 ' + esc(s.name) + '</b> 当前：' + esc(t.join(' · ')) +
+      (r ? '　｜　' + esc(r.name) : '');
   }
 
   function nightStepDone(skip) {
@@ -691,12 +847,16 @@
     if ((el = e.target.closest('[data-gswap]'))) { swapNew(+el.dataset.gswap); return; }
 
     /* 魔典 */
+    if ((el = e.target.closest('[data-gork]'))) { UI.orderKey = el.dataset.gork; renderGrimoire(); return; }
+    if (e.target.closest('[data-gora]')) { UI.orderAll = !UI.orderAll; renderGrimoire(); return; }
+    if ((el = e.target.closest('[data-gojump]'))) { jumpNight(+el.dataset.gojump); return; }
     if ((el = e.target.closest('[data-gseat]'))) { openSeat(+el.dataset.gseat); return; }
     if (e.target.closest('[data-gback]') || e.target.closest('[data-gback2]')) { location.hash = G ? '#/game' : '#/home'; return; }
     if (e.target.closest('[data-gnight]')) { location.hash = '#/game/night'; return; }
     if (e.target.closest('[data-gday]')) { location.hash = '#/game/day'; return; }
     if (e.target.closest('[data-glog]')) { location.hash = '#/game/log'; return; }
     if (e.target.closest('[data-gboard]')) { location.hash = '#/board'; return; }
+    if (e.target.closest('[data-gnew]')) { UI.newCfg = null; location.hash = '#/game/new'; return; }
     if (e.target.closest('[data-gtonight]')) { toNight(); return; }
     if (e.target.closest('[data-gendnight]')) { endNight(); return; }
     if (e.target.closest('[data-gnext]')) { nightStepDone(false); return; }
@@ -796,6 +956,14 @@
       checkWin();
     }
     save(); renderNight();
+  }
+
+  function jumpNight(i) {
+    if (G.phase === 'setup') { G.phase = 'night'; G.night = 'first'; G.nightStep = 0; log('首个夜晚开始', 'night'); }
+    else if (G.phase !== 'night') { alert('当前不在夜晚阶段，请先点「进入夜晚」。'); return; }
+    G.nightStep = Math.max(0, Math.min(i, nightList().length));
+    save();
+    location.hash = '#/game/night';
   }
 
   function toNight() {

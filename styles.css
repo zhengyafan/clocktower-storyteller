@@ -337,3 +337,39 @@ table.tb td:first-child{font-weight:700;background:var(--bg-soft)}
 .logrow{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.6}
 .logrow:last-child{border-bottom:0}
 .logrow .li{flex:0 0 auto}
+
+/* ---------- 行动顺序 & 状态总览 ---------- */
+.ordbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.ordlist{display:flex;flex-direction:column;gap:4px}
+.ord{display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-radius:10px;
+  background:var(--bg-soft);border:1px solid transparent;cursor:pointer}
+.ord:active{transform:scale(.99)}
+.ord .oi{flex:0 0 22px;height:22px;border-radius:7px;background:#fff;border:1px solid var(--line);
+  color:var(--text-faint);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.ord .ob{flex:1;min-width:0}
+.ord .on{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ord .os{font-size:11.5px;color:var(--text-faint);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis}
+.ord.done{background:#f2f7ec;border-color:#d9e8c6}
+.ord.done .oi{background:#6f9b32;color:#fff;border-color:#6f9b32}
+.ord.cur{background:var(--accent-soft);border-color:var(--accent);box-shadow:0 0 0 2px rgba(139,30,45,.08)}
+.ord.cur .oi{background:var(--accent);color:#fff;border-color:var(--accent)}
+.ord.skip .on{opacity:.55;text-decoration:line-through}
+.ord.gone .on{color:var(--text-faint);text-decoration:line-through}
+.ord .rec{font-size:11.5px;color:var(--purple);margin-top:2px}
+
+.sttable{width:100%;border-collapse:collapse;font-size:12.5px}
+.sttable th,.sttable td{padding:6px 5px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.sttable th{font-size:11px;color:var(--text-faint);font-weight:700;letter-spacing:.5px;background:var(--bg-soft)}
+.sttable tr:last-child td{border-bottom:0}
+.sttable .sn2{font-weight:700}
+.sttable .dead{opacity:.5;text-decoration:line-through}
+.sttable .mini{font-size:10px;padding:0 4px;border-radius:4px;background:var(--bg-soft);
+  color:var(--text-dim);display:inline-block;margin:1px 2px 0 0;border:1px solid var(--line)}
+.sttable .mini.on{background:var(--accent-soft);color:var(--accent);border-color:#e8c3c8}
+.sttable .mini.ps{background:#e8f0d9;color:#4a6b1f;border-color:#d3e3b4}
+.sttable .mini.dk{background:#f3e6d0;color:#8a5a1f;border-color:#e6d2ae}
+.sttable .mini.pt{background:var(--traveler-soft);color:var(--traveler);border-color:#cddff3}
+.sttable .mini.rd{background:var(--evil-soft);color:var(--evil);border-color:#eecfd3}
+.stwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nowrap{white-space:nowrap}
