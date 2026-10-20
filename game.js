@@ -72,7 +72,10 @@
       if (p.length === n && !hasJinx(p)) { picked = p; break; }
       if (!picked) picked = p;
     }
-    return { roles: picked, comp: comp };
+    /* 关键：选好角色后必须整体洗牌再分配到座位。
+       否则会按 镇民→外来者→爪牙→恶魔 的顺序依次坐座，导致邪恶方永远坐在最后几个座位。 */
+    var mixed = shuffle(picked || []);
+    return { roles: mixed, comp: comp };
   }
 
   /* ================= 路由入口 ================= */
@@ -138,7 +141,8 @@
           var r = byId[rid];
           return '<div class="dealc t-' + r.team + '" data-gswap="' + i + '"><b>' + (i + 1) + '号</b><span>' + esc(r.name) + '</span><i>' + esc(TEAMCN[r.team]) + '</i></div>';
         }).join('') + '</div>' +
-        '<div class="note">共 ' + cfg.roles.length + ' 张。点击任意一张可更换为该阵营的其他角色。</div></div>';
+        '<div class="note">共 ' + cfg.roles.length + ' 张。点击任意一张可更换为该阵营的其他角色。</div>' +
+        '<div class="qbtns" style="margin-top:10px"><button class="btn" data-gseatshuffle="1">🔀 打乱座位顺序</button></div></div>';
     }
 
     html += '<div class="qbtns">' +
@@ -991,6 +995,7 @@
     }
     if (e.target.closest('[data-gdeal]')) { syncNames(); doDeal(); return; }
     if (e.target.closest('[data-gstart]')) { syncNames(); startGame(); return; }
+    if ((el = e.target.closest('[data-gseatshuffle]'))) { syncNames(); if (UI.newCfg && UI.newCfg.roles) { UI.newCfg.roles = shuffle(UI.newCfg.roles); renderNew(); } return; }
     if ((el = e.target.closest('[data-gswap]'))) { swapNew(+el.dataset.gswap); return; }
 
     /* 魔典 */
