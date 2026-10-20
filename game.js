@@ -25,7 +25,7 @@
   /* ================= 状态 ================= */
   var G = LS.get('game', null);
   var UI = { sheetSeat: -1, vote: null, timer: null, timerLeft: 180, timerMin: 3, newCfg: null,
-    orderKey: null, orderAll: false, lsWarn: false };
+    orderKey: null, orderAll: false, lsWarn: false, abRes: null };
 
   function save() { if (!LS.set('game', G)) UI.lsWarn = true; }
   try { localStorage.setItem('botcg_probe', '1'); localStorage.removeItem('botcg_probe'); }
@@ -180,7 +180,17 @@
       v: 1, edition: cfg.ed, fabled: cfg.fabled || [], day: 0, phase: 'setup',
       night: 'first', nightStep: 0, nightActs: {}, seats: seats, log: [], noms: [], winner: null, startedAt: Date.now()
     };
+    /* 占卜师：自动指定一名善良玩家作为红鲱鱼（干扰项） */
+    var ft = null, red = null;
+    seats.forEach(function (s) { var r = byId[s.role]; if (r && r.id === 'fortune_teller') ft = s; });
+    if (ft) {
+      var cand = seats.filter(function (s) {
+        var r = byId[s.role]; return r && (r.team === 'townsfolk' || r.team === 'outsider') && r.id !== 'fortune_teller';
+      });
+      if (cand.length) { red = cand[Math.floor(Math.random() * cand.length)]; red.st.red = true; }
+    }
     log('创建对局：' + (EDNAME(cfg.ed)) + ' · ' + cfg.n + ' 人' + (cfg.travelers.length ? ' + ' + cfg.travelers.length + ' 旅行者' : ''), 'setup');
+    if (red) log('占卜师的红鲱鱼（干扰项）自动指定为 ' + red.n + '号 ' + red.name, 'setup');
       save();
       UI.newCfg = null;
       UI.orderKey = null;
@@ -354,7 +364,7 @@
       '<div class="ftl">阶段控制</div><div class="qbtns">' +
       (G.phase === 'setup' ? '<button class="btn primary" data-gtonight="1">开始夜晚</button>' : '') +
       (G.phase === 'night' ? '<button class="btn primary" data-gnight="1">继续夜晚流程</button>' : '') +
-      (G.phase === 'day' ? '<button class="btn primary" data-gday="1">进入白天（提名 / 投票）</button>' : '') +
+      (G.phase === 'day' ? '<button class="btn primary" data-gtoday="1">进入白天（提名 / 投票）</button>' : '') +
       (G.phase === 'day' ? '<button class="btn" data-gtonight="1">直接进入夜晚</button>' : '') +
       '<button class="btn" data-glog="1">对局日志</button>' +
       '<button class="btn" data-gboard="1">公开看板（投屏）</button>' +
@@ -530,12 +540,20 @@
       '<div class="ordlist">' + orderRowsHtml(orderRows(G.night, true), true, G.night, true) + '</div></div>';
 
     if (s) {
-      html += '<div class="card" style="margin-top:12px;padding:12px 14px">' +
-        '<div class="ftl">选择目标玩家（记录用）</div>' +
-        '<select id="tgt" class="sel">' + G.seats.map(function (p) {
-          return '<option value="' + p.n + '"' + (act.target === p.n ? ' selected' : '') + '>' + p.n + '号 ' + esc(p.name) + (p.alive ? '' : '（死亡）') + '</option>';
-        }).join('') + '</select>' +
-        '<div id="tgtinfo" class="sttip" style="background:var(--bg-soft);color:var(--text-dim)"></div>' +
+      var ab = (window.BOTCAbility && BOTCAbility.has(r.id)) ? BOTCAbility.get(r.id) : null;
+      html += '<div class="card" style="margin-top:12px;padding:12px 14px">';
+      if (ab) {
+        html += '<div class="ftl">🪄 能力助手 · ' + esc(r.name) + '（自动计算）</div>' +
+          '<div class="abhint">' + esc(ab.hint || '') + '</div>';
+        if (ab.targets >= 1) html += selectHtml('tgt', '目标玩家', act.target, ab.excludeSelf ? s.n : 0);
+        if (ab.targets >= 2) html += selectHtml('tgt2', '第二个目标', act.target2, ab.excludeSelf ? s.n : 0);
+        if (ab.targets === 0) html += '<div class="note">该能力无需选择目标，直接查看下方计算结果。</div>';
+        html += '<div id="abres"></div>';
+      } else {
+        html += '<div class="ftl">选择目标玩家（记录用）</div>' + selectHtml('tgt', '', act.target, 0) +
+          '<div class="abauto">该角色暂未内置自动计算，请用下方快捷效果与备注手动处理，并参考上方「说书人提示」。</div>';
+      }
+      html += '<div id="tgtinfo" class="sttip" style="background:var(--bg-soft);color:var(--text-dim)"></div>' +
         '<div class="ftl">快捷效果（对所选目标生效）</div><div class="chips">' +
         '<button class="chip" data-gneff="poison">标记中毒</button>' +
         '<button class="chip" data-gneff="drunk">标记醉酒</button>' +
@@ -560,7 +578,73 @@
     }
     view().innerHTML = html;
     var sel = $('#tgt');
-    if (sel) { sel.addEventListener('change', updateTgtInfo); updateTgtInfo(); }
+    if (sel) { sel.addEventListener('change', onTargetChange); updateTgtInfo(); }
+    var s2 = $('#tgt2');
+    if (s2) s2.addEventListener('change', onTargetChange);
+    updateAbility();
+  }
+
+  function selectHtml(id, label, val, excludeN) {
+    return (label ? '<div class="ftl">' + esc(label) + '</div>' : '') +
+      '<select id="' + id + '" class="sel">' + G.seats.filter(function (p) { return p.n !== excludeN; }).map(function (p) {
+        return '<option value="' + p.n + '"' + (val === p.n ? ' selected' : '') + '>' + p.n + '号 ' + esc(p.name) + (p.alive ? '' : '（死亡）') + '</option>';
+      }).join('') + '</select>';
+  }
+
+  function onTargetChange() { updateTgtInfo(); updateAbility(); }
+
+  /* ---------- 能力自动计算 ---------- */
+  function computeAbility() {
+    if (!window.BOTCAbility) return null;
+    var list = nightList();
+    var i = Math.min(G.nightStep, list.length);
+    if (i >= list.length) return null;
+    var x = list[i], r = byId[x.id];
+    if (!r || !BOTCAbility.has(r.id)) return null;
+    var s = null; G.seats.forEach(function (p) { if (p.role === x.id) s = p; });
+    if (!s) return null;
+    var ctx = BOTCAbility.buildCtx(G, s, { byId: byId, log: log, save: save });
+    var ab = BOTCAbility.get(r.id);
+    var a1 = $('#tgt'), a2 = $('#tgt2');
+    var t1 = a1 ? seat(+a1.value) : null;
+    var t2 = a2 ? seat(+a2.value) : null;
+    return { ab: ab, res: ab.calc(ctx, t1, t2), self: s };
+  }
+
+  function abResHtml(res) {
+    if (!res) return '';
+    var h = '<div class="abbox">' +
+      '<div class="abinfo">' + esc(res.info) + '</div>' +
+      (res.detail ? '<div class="abdetail">' + esc(res.detail) + '</div>' : '') +
+      (res.say ? '<div class="absay"><b>给玩家</b>' + esc(res.say) + '</div>' : '') +
+      '</div>';
+    if (res.actions && res.actions.length) {
+      h += '<div class="ftl">执行</div><div class="chips">' + res.actions.map(function (a, i) {
+        return '<button class="chip on p" data-gab="' + i + '">' + esc(a.label) + '</button>';
+      }).join('') + '</div>';
+    }
+    if (res.reroll) h += '<div class="qbtns"><button class="btn" data-gabroll="1">重新生成一组</button></div>';
+    return h;
+  }
+
+  function updateAbility() {
+    var box = $('#abres'); if (!box) return;
+    var c = computeAbility();
+    if (!c) { box.innerHTML = ''; UI.abRes = null; return; }
+    UI.abRes = c;
+    var warn = (c.self.st.poison || c.self.st.drunk)
+      ? '<div class="abwarn">⚠ 该角色当前中毒 / 醉酒 —— 规则上你可以给出任意信息。下方是「真实」计算结果，仅供你参考（可故意给错）。</div>' : '';
+    box.innerHTML = warn + abResHtml(c.res);
+    var nt = $('#note');
+    if (nt && !nt.value && c.res && c.res.info && c.res.info !== '—') nt.value = c.res.info;
+  }
+
+  function runAbility(i) {
+    var c = UI.abRes;
+    if (!c || !c.res || !c.res.actions || !c.res.actions[i]) return;
+    c.res.actions[i].run();
+    save();
+    renderNight();
   }
 
   function updateTgtInfo() {
@@ -584,11 +668,12 @@
     var x = list[i];
     var act = G.nightActs[G.night + ':' + i] || {};
     var tgt = null, note = '';
-    var sel = $('#tgt'), nt = $('#note');
+    var sel = $('#tgt'), nt = $('#note'), s2 = $('#tgt2');
     if (sel) tgt = +sel.value;
     if (nt) note = nt.value.trim();
     act.label = x.name;
     if (tgt) act.target = tgt;
+    if (s2) act.target2 = +s2.value;
     if (note) act.note = note;
     act.skip = !!skip;
     G.nightActs[G.night + ':' + i] = act;
@@ -596,6 +681,66 @@
     G.nightStep = i + 1;
     save();
     renderNight();
+  }
+
+  /* ---------- 白天 / 即时能力 ---------- */
+  function dayAbilityHtml() {
+    if (!window.BOTCAbility) return '';
+    var list = G.seats.filter(function (s) {
+      var r = roleOf(s);
+      return r && BOTCAbility.has(r.id) && BOTCAbility.get(r.id).when === 'day';
+    });
+    if (!list.length) return '';
+    return '<div class="card" style="margin-top:12px;padding:12px 14px">' +
+      '<div class="ftl">⚡ 白天 / 即时能力（点击使用）</div><div class="chips">' +
+      list.map(function (s) {
+        var r = roleOf(s);
+        return '<button class="chip" data-gday="' + s.n + '">' + esc(r.name) + ' · ' + s.n + '号</button>';
+      }).join('') + '</div>' +
+      '<div class="note">这些能力在白天或满足条件时发动；点击后弹出的面板会按当前局面自动计算并可直接执行。</div></div>';
+  }
+
+  function openAbilitySheet(n) {
+    var s = seat(n); if (!s) return;
+    var r = roleOf(s);
+    if (!r || !window.BOTCAbility || !BOTCAbility.has(r.id)) { alert('该角色暂无内置能力助手，请按能力文本手动处理。'); return; }
+    var ab = BOTCAbility.get(r.id);
+    var ctx = BOTCAbility.buildCtx(G, s, { byId: byId, log: log, save: save });
+    var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'seatov';
+    ov.innerHTML = '<div class="sheet"><div class="sh">' +
+      '<div><b>' + esc(r.name) + ' · 能力助手</b><div class="sub">' + s.n + '号 ' + esc(s.name) + '　' + esc(TEAMCN[r.team] || '') + '</div></div>' +
+      '<button class="x" data-gclose="1">✕</button></div>' +
+      '<div class="sb"><div class="ability-box" style="margin:0 0 8px">' + esc(r.ability) + '</div>' +
+      '<div class="abhint">' + esc(ab.hint || '') + '</div>' +
+      (ab.targets >= 1 ? selectHtml('atgt', '目标玩家', null, ab.excludeSelf ? s.n : 0) : '') +
+      (ab.targets >= 2 ? selectHtml('atgt2', '第二个目标', null, ab.excludeSelf ? s.n : 0) : '') +
+      '<div id="ares"></div></div></div>';
+    document.body.appendChild(ov);
+    function refresh() {
+      var t1 = $('#atgt', ov) ? seat(+$('#atgt', ov).value) : null;
+      var t2 = $('#atgt2', ov) ? seat(+$('#atgt2', ov).value) : null;
+      var res = ab.calc(ctx, t1, t2);
+      UI.abRes = { res: res, self: s };
+      var warn = (s.st.poison || s.st.drunk)
+        ? '<div class="abwarn">⚠ 该角色当前中毒 / 醉酒 —— 你可给出任意信息，下方为真实计算结果。</div>' : '';
+      $('#ares', ov).innerHTML = warn + abResHtml(res);
+    }
+    refresh();
+    ['atgt', 'atgt2'].forEach(function (id) { var e = $('#' + id, ov); if (e) e.addEventListener('change', refresh); });
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) { closeSheet(); return; }
+      if (e.target.closest('[data-gclose]')) { closeSheet(); return; }
+      var el = e.target.closest('[data-gab]');
+      if (el) {
+        var c = UI.abRes;
+        if (c && c.res && c.res.actions && c.res.actions[+el.dataset.gab]) {
+          c.res.actions[+el.dataset.gab].run();
+          save(); closeSheet(); renderDay();
+        }
+        return;
+      }
+      if (e.target.closest('[data-gabroll]')) { refresh(); return; }
+    });
   }
 
   /* ================= 白天 ================= */
@@ -621,6 +766,8 @@
           '<div class="rm">赞成 ' + yes + ' · 反对 ' + no + ' · 弃权 ' + sk +
           (v.result === 'exec' ? ' · <b style="color:var(--accent)">已处决</b>' : (v.result === 'tie' ? ' · 未通过' : (v.open ? ' · 投票中' : ''))) + '</div></div></div>';
       }).join('') : '<div class="note">还没有提名</div>') + '</div>';
+
+    html += dayAbilityHtml();
 
     if (UI.vote) {
       var v = UI.vote;
@@ -853,7 +1000,7 @@
     if ((el = e.target.closest('[data-gseat]'))) { openSeat(+el.dataset.gseat); return; }
     if (e.target.closest('[data-gback]') || e.target.closest('[data-gback2]')) { location.hash = G ? '#/game' : '#/home'; return; }
     if (e.target.closest('[data-gnight]')) { location.hash = '#/game/night'; return; }
-    if (e.target.closest('[data-gday]')) { location.hash = '#/game/day'; return; }
+    if (e.target.closest('[data-gtoday]')) { location.hash = '#/game/day'; return; }
     if (e.target.closest('[data-glog]')) { location.hash = '#/game/log'; return; }
     if (e.target.closest('[data-gboard]')) { location.hash = '#/board'; return; }
     if (e.target.closest('[data-gnew]')) { UI.newCfg = null; location.hash = '#/game/new'; return; }
@@ -862,6 +1009,8 @@
     if (e.target.closest('[data-gnext]')) { nightStepDone(false); return; }
     if (e.target.closest('[data-gskip]')) { nightStepDone(true); return; }
     if (e.target.closest('[data-gbackstep]')) { G.nightStep = Math.max(0, G.nightStep - 1); save(); renderNight(); return; }
+    if ((el = e.target.closest('[data-gab]'))) { runAbility(+el.dataset.gab); return; }
+    if (e.target.closest('[data-gabroll]')) { renderNight(); return; }
     if ((el = e.target.closest('[data-gneff]'))) { nightEffect(el.dataset.gneff); return; }
     if (e.target.closest('[data-gdel]')) {
       if (confirm('确定结束并删除当前对局？')) { G = null; save(); location.hash = '#/game/new'; }
@@ -886,6 +1035,7 @@
     }
 
     /* 白天 */
+    if ((el = e.target.closest('[data-gday]'))) { openAbilitySheet(+el.dataset.gday); return; }
     if ((el = e.target.closest('[data-gtm]'))) { UI.timerMin = +el.dataset.gtm; UI.timerLeft = UI.timerMin * 60; renderDay(); return; }
     if (e.target.closest('[data-gtstart]')) {
       if (UI.timer) { clearInterval(UI.timer); UI.timer = null; }
@@ -963,7 +1113,8 @@
     else if (G.phase !== 'night') { alert('当前不在夜晚阶段，请先点「进入夜晚」。'); return; }
     G.nightStep = Math.max(0, Math.min(i, nightList().length));
     save();
-    location.hash = '#/game/night';
+    if (location.hash === '#/game/night') renderNight();
+    else location.hash = '#/game/night';
   }
 
   function toNight() {
