@@ -222,9 +222,10 @@
     var present = {}; G.seats.forEach(function (s) { if (s.role) present[s.role] = s; });
     var fb = {}; (G.fabled || []).forEach(function (id) { fb[id] = 1; });
     var src = D.nightOrder[key] || [];
+    if (key === 'first') { var em = evilMeetItem(); if (em) src = [em].concat(src); }
     var out = [], gi = 0;
     src.forEach(function (x) {
-      var inGame = !!present[x.id] || !!fb[x.id];
+      var inGame = x.id === '__evil_meet' ? true : (!!present[x.id] || !!fb[x.id]);
       if (onlyPresent && !inGame) return;
       out.push({ x: x, i: gi, seat: present[x.id] || null, inGame: inGame, fabled: !!fb[x.id] });
       gi++;
@@ -259,7 +260,8 @@
       return '<div class="' + cls + '"' + (clickable ? ' data-gojump="' + r.i + '"' : '') + '>' +
         '<div class="oi">' + (fin ? '✓' : (r.i + 1)) + '</div>' +
         '<div class="ob"><div class="on">' + esc(r.x.name) +
-        (team ? ' <span class="tag t-' + team + '">' + esc(TEAMCN[team] || team) + '</span>' : '') +
+        (team ? ' <span class="tag t-' + team + '">' + esc(TEAMCN[team] || team) + '</span>'
+          : (r.x.tag ? ' <span class="tag">' + esc(r.x.tag) + '</span>' : '')) +
         (r.seat && !r.seat.alive ? ' <span class="mk dead">死亡</span>' : '') + '</div>' +
         '<div class="os">' + esc(sub) + '</div>' + rec + '</div></div>';
     }).join('');
@@ -287,7 +289,9 @@
       '<div class="ordlist">' + (body || '<div class="note">没有可显示的顺序</div>') + '</div>' +
       '<div class="note">' + (all
         ? '当前为剧本完整顺序，仅供查阅。'
-        : '点击任意一步可直接跳到该步执行；✓ 已完成，红框为当前步。') + '</div></div>';
+        : (key === 'other'
+          ? '点击任意一步可直接跳到该步执行；✓ 已完成，红框为当前步。首夜已完成互认，这里不再重复；若本夜产生了新的爪牙/恶魔（红唇女郎接替、方古造爪牙等），请手动补一次互认并记进备注。'
+          : '点击任意一步可直接跳到该步执行；✓ 已完成，红框为当前步。')) + '</div></div>';
   }
 
   /* ================= 角色状态总览 ================= */
@@ -369,6 +373,13 @@
     }
 
     /* 夜晚行动顺序 + 角色状态总览 */
+    if (G.bluffs && G.bluffs.length) {
+      html += '<div class="card" style="margin-top:12px;padding:12px 14px"><div class="ftl">😈 恶魔的伪装牌（bluffs）</div>' +
+        '<div class="chips">' + G.bluffs.map(function (id) {
+          var r = byId[id]; return '<span class="chip on">' + esc(r ? r.name : id) + '</span>';
+        }).join('') + '</div>' +
+        '<div class="note">首夜互认时给恶魔看的「不在本局的善良角色」，用来伪装自己；只有恶魔和你知道。</div></div>';
+    }
     html += orderPanelHtml();
     html += statusTableHtml();
 
@@ -506,11 +517,26 @@
   }
 
   /* ================= 夜晚流程 ================= */
+  /* 首夜的「恶魔与爪牙互认」：官方数据里没有这一条，这里补上并放在最前 */
+  function evilMeetItem() {
+    var has = G && G.seats.some(function (s) {
+      var r = byId[s.role]; return r && (r.team === 'demon' || r.team === 'minion');
+    });
+    if (!has) return null;
+    return {
+      id: '__evil_meet', name: '恶魔与爪牙互认', team: '', tag: '邪恶', order: -1,
+      reminder: '唤醒所有爪牙与恶魔，让他们互相认识（爪牙知道恶魔是谁、彼此是谁；恶魔知道爪牙是谁）。' +
+        '然后单独给恶魔看 3 张「不在本局的善良角色」作为伪装（bluffs）。首夜之后不再互认。'
+    };
+  }
+
   function nightList() {
     var present = {};
     G.seats.forEach(function (s) { if (s.role) present[s.role] = s; });
     var fb = {}; (G.fabled || []).forEach(function (id) { fb[id] = 1; });
-    return (D.nightOrder[G.night] || []).filter(function (x) { return present[x.id] || fb[x.id]; });
+    var base = (D.nightOrder[G.night] || []).filter(function (x) { return present[x.id] || fb[x.id]; });
+    if (G.night === 'first') { var em = evilMeetItem(); if (em) base = [em].concat(base); }
+    return base;
   }
 
   function renderNight() {
@@ -540,10 +566,13 @@
     G.seats.forEach(function (p) { if (p.role === x.id) s = p; });
     var act = G.nightActs[G.night + ':' + i] || {};
 
+    var isMeet = x.id === '__evil_meet';
     html += '<div class="card nightcard">' +
       '<div class="nh"><div class="no">' + (i + 1) + '</div><div><div class="nm">' + esc(x.name) +
-      ' <span class="tag t-' + x.team + '">' + esc(TEAMCN[x.team] || x.team) + '</span></div>' +
-      '<div class="sub">' + (s ? (s.n + '号 · ' + esc(s.name) + (s.alive ? '' : '（已死亡）')) : (x.team === 'fabled' ? '传奇角色' : '—')) + '</div></div></div>' +
+      (x.team ? ' <span class="tag t-' + x.team + '">' + esc(TEAMCN[x.team] || x.team) + '</span>'
+        : (x.tag ? ' <span class="tag">' + esc(x.tag) + '</span>' : '')) + '</div>' +
+      '<div class="sub">' + (s ? (s.n + '号 · ' + esc(s.name) + (s.alive ? '' : '（已死亡）'))
+        : (isMeet ? '全体邪恶玩家（爪牙 + 恶魔）' : (x.team === 'fabled' ? '传奇角色' : '—'))) + '</div></div></div>' +
       (r && r.ability ? '<div class="ability-box">' + esc(r.ability) + '</div>' : '') +
       (x.reminder ? '<div class="sttip"><b>说书人提示</b>' + esc(x.reminder) + '</div>' : '') +
       '</div>';
@@ -552,29 +581,33 @@
       '<div class="ftl">本夜完整行动顺序（点击可跳步）</div>' +
       '<div class="ordlist">' + orderRowsHtml(orderRows(G.night, true), true, G.night, true) + '</div></div>';
 
-    if (s) {
-      var ab = (window.BOTCAbility && BOTCAbility.has(r.id)) ? BOTCAbility.get(r.id) : null;
+    if (s || isMeet) {
+      var rid = isMeet ? x.id : r.id;
+      var ab = (window.BOTCAbility && BOTCAbility.has(rid)) ? BOTCAbility.get(rid) : null;
       html += '<div class="card" style="margin-top:12px;padding:12px 14px">';
       if (ab) {
-        html += '<div class="ftl">🪄 能力助手 · ' + esc(r.name) + '（自动计算）</div>' +
+        html += '<div class="ftl">🪄 能力助手 · ' + esc(x.name) + '（自动计算）</div>' +
           '<div class="abhint">' + esc(ab.hint || '') + '</div>';
-        if (ab.targets >= 1) html += selectHtml('tgt', '目标玩家', act.target, ab.excludeSelf ? s.n : 0);
-        if (ab.targets >= 2) html += selectHtml('tgt2', '第二个目标', act.target2, ab.excludeSelf ? s.n : 0);
-        if (ab.targets === 0) html += '<div class="note">该能力无需选择目标，直接查看下方计算结果。</div>';
+        if (ab.targets >= 1) html += selectHtml('tgt', '目标玩家', act.target, (ab.excludeSelf && s) ? s.n : 0);
+        if (ab.targets >= 2) html += selectHtml('tgt2', '第二个目标', act.target2, (ab.excludeSelf && s) ? s.n : 0);
+        if (ab.targets === 0) html += '<div class="note">该环节无需选择目标，直接查看下方计算结果。</div>';
         html += '<div id="abres"></div>';
       } else {
         html += '<div class="ftl">选择目标玩家（记录用）</div>' + selectHtml('tgt', '', act.target, 0) +
           '<div class="abauto">该角色暂未内置自动计算，请用下方快捷效果与备注手动处理，并参考上方「说书人提示」。</div>';
       }
-      html += '<div id="tgtinfo" class="sttip" style="background:var(--bg-soft);color:var(--text-dim)"></div>' +
-        '<div class="ftl">快捷效果（对所选目标生效）</div><div class="chips">' +
-        '<button class="chip" data-gneff="poison">标记中毒</button>' +
-        '<button class="chip" data-gneff="drunk">标记醉酒</button>' +
-        '<button class="chip" data-gneff="protect">标记保护</button>' +
-        '<button class="chip" data-gneff="kill">杀死</button>' +
-        '<button class="chip" data-gneff="clear">清除中毒/醉酒</button>' +
-        '</div>' +
-        '<div class="ftl">备注</div><input id="note" class="sel" placeholder="例如：得知 3 号是镇民" value="' + esc(act.note || '') + '">' +
+      if (!isMeet) {
+        html += '<div id="tgtinfo" class="sttip" style="background:var(--bg-soft);color:var(--text-dim)"></div>' +
+          '<div class="ftl">快捷效果（对所选目标生效）</div><div class="chips">' +
+          '<button class="chip" data-gneff="poison">标记中毒</button>' +
+          '<button class="chip" data-gneff="drunk">标记醉酒</button>' +
+          '<button class="chip" data-gneff="protect">标记保护</button>' +
+          '<button class="chip" data-gneff="kill">杀死</button>' +
+          '<button class="chip" data-gneff="clear">清除中毒/醉酒</button>' +
+          '</div>';
+      }
+      html += '<div class="ftl">备注</div><input id="note" class="sel" placeholder="' +
+        (isMeet ? '例如：已给恶魔看伪装牌' : '例如：得知 3 号是镇民') + '" value="' + esc(act.note || '') + '">' +
         '</div>';
     }
 
@@ -613,11 +646,12 @@
     var i = Math.min(G.nightStep, list.length);
     if (i >= list.length) return null;
     var x = list[i], r = byId[x.id];
-    if (!r || !BOTCAbility.has(r.id)) return null;
+    if (!r && x.id !== '__evil_meet') return null;
+    if (!BOTCAbility.has(x.id)) return null;
     var s = null; G.seats.forEach(function (p) { if (p.role === x.id) s = p; });
-    if (!s) return null;
+    if (!s && x.id !== '__evil_meet') return null;
     var ctx = BOTCAbility.buildCtx(G, s, { byId: byId, log: log, save: save });
-    var ab = BOTCAbility.get(r.id);
+    var ab = BOTCAbility.get(x.id);
     var a1 = $('#tgt'), a2 = $('#tgt2');
     var t1 = a1 ? seat(+a1.value) : null;
     var t2 = a2 ? seat(+a2.value) : null;
@@ -627,10 +661,11 @@
   function abResHtml(res) {
     if (!res) return '';
     var h = '<div class="abbox">' +
-      '<div class="abinfo">' + esc(res.info) + '</div>' +
+      '<div class="abinfo"' + (res.info && res.info.length > 22 ? ' style="font-size:16px;line-height:1.5"' : '') + '>' + esc(res.info) + '</div>' +
       (res.detail ? '<div class="abdetail">' + esc(res.detail) + '</div>' : '') +
       (res.say ? '<div class="absay"><b>给玩家</b>' + esc(res.say) + '</div>' : '') +
-      '</div>';
+      '</div>' +
+      (res.warn ? '<div class="abwarn">' + esc(res.warn) + '</div>' : '');
     if (res.actions && res.actions.length) {
       h += '<div class="ftl">执行</div><div class="chips">' + res.actions.map(function (a, i) {
         return '<button class="chip on p" data-gab="' + i + '">' + esc(a.label) + '</button>';
@@ -645,11 +680,12 @@
     var c = computeAbility();
     if (!c) { box.innerHTML = ''; UI.abRes = null; return; }
     UI.abRes = c;
-    var warn = (c.self.st.poison || c.self.st.drunk)
+    var warn = (c.self && (c.self.st.poison || c.self.st.drunk))
       ? '<div class="abwarn">⚠ 该角色当前中毒 / 醉酒 —— 规则上你可以给出任意信息。下方是「真实」计算结果，仅供你参考（可故意给错）。</div>' : '';
     box.innerHTML = warn + abResHtml(c.res);
     var nt = $('#note');
-    if (nt && !nt.value && c.res && c.res.info && c.res.info !== '—') nt.value = c.res.info;
+    /* 只在信息很短时自动填入备注（互认环节这类长文本不自动填，避免污染记录） */
+    if (nt && !nt.value && c.res && c.res.info && c.res.info !== '—' && c.res.info.length <= 24) nt.value = c.res.info;
   }
 
   function runAbility(i) {
@@ -1026,7 +1062,12 @@
     if (e.target.closest('[data-gskip]')) { nightStepDone(true); return; }
     if (e.target.closest('[data-gbackstep]')) { G.nightStep = Math.max(0, G.nightStep - 1); save(); renderNight(); return; }
     if ((el = e.target.closest('[data-gab]'))) { runAbility(+el.dataset.gab); return; }
-    if (e.target.closest('[data-gabroll]')) { renderNight(); return; }
+    if (e.target.closest('[data-gabroll]')) {
+      /* 重抽：互认环节重抽的是「伪装牌」 */
+      var lb = nightList(), bi = Math.min(G.nightStep, lb.length);
+      if (lb[bi] && lb[bi].id === '__evil_meet') { G.bluffs = null; save(); }
+      renderNight(); return;
+    }
     if ((el = e.target.closest('[data-gneff]'))) { nightEffect(el.dataset.gneff); return; }
     if (e.target.closest('[data-gdel]')) {
       if (confirm('确定结束并删除当前对局？')) { G = null; save(); location.hash = '#/game/new'; }

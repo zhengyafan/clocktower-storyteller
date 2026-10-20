@@ -64,6 +64,75 @@ window.BOTCAbility = (function () {
   }
 
   /* =========================================================
+   *  夜晚流程 · 恶魔与爪牙互认（首夜第 1 步，说书人流程而非某个角色）
+   * ========================================================= */
+  def('__evil_meet', {
+    targets: 0,
+    hint: '首夜第 1 步：唤醒全部爪牙与恶魔让他们互相认识，并单独给恶魔看 3 张「不在本局的善良角色」作为伪装（bluffs）。首夜之后不再互认。',
+    calc: function (c) {
+      var G = c.G;
+      var demons = c.seats.filter(function (s) { var r = c.role(s); return r && r.team === 'demon'; });
+      var minions = c.seats.filter(function (s) { var r = c.role(s); return r && r.team === 'minion'; });
+      if (!demons.length && !minions.length) return { info: '—', detail: '本局没有恶魔或爪牙。' };
+
+      var used = {};
+      c.seats.forEach(function (s) { if (s.role) used[s.role] = 1; });
+      var pool = [];
+      Object.keys(c.byId).forEach(function (k) {
+        var r = c.byId[k]; if (!r) return;
+        if (r.team !== 'townsfolk' && r.team !== 'outsider') return;
+        if (G.edition && r.edition && r.edition !== G.edition) return;
+        if (used[r.id]) return;
+        pool.push(r);
+      });
+      if (!G.bluffs || !G.bluffs.length) {
+        G.bluffs = c.shuffle(pool).slice(0, 3).map(function (r) { return r.id; });
+        if (c.save) c.save();
+      }
+      var bluffs = (G.bluffs || []).map(function (id) { return c.byId[id]; }).filter(Boolean);
+      function lab(s) { var r = c.role(s); return c.nm(s) + (r ? '（' + r.name + '）' : ''); }
+      var info = '恶魔：' + (demons.map(lab).join('、') || '—') + '　｜　爪牙：' + (minions.map(lab).join('、') || '—');
+      var detail = [
+        '恶魔：' + (demons.map(lab).join('、') || '无'),
+        '爪牙：' + (minions.map(lab).join('、') || '无'),
+        '伪装牌（给恶魔看，本局不在场的善良角色）：' + (bluffs.map(function (r) { return r.name; }).join('、') || '无')
+      ].join('\n');
+      var bluffText = '伪装牌：' + bluffs.map(function (r) { return r.name; }).join('、');
+      var say = '（先唤醒爪牙）指向恶魔：这是你们的恶魔；再指向其余爪牙：这是你们的同伴。' +
+        '（再唤醒恶魔）指向每名爪牙：这些是你的爪牙；并展示 ' + bluffs.length + ' 张伪装牌：' +
+        bluffs.map(function (r) { return r.name; }).join('、') + '。';
+
+      var special = [];
+      ['lunatic', 'marionette', 'evil_twin', 'spy', 'wraith', 'boffin', 'poppy_grower', 'widow'].forEach(function (id) {
+        if (c.withRole(id).length && c.byId[id]) special.push(c.byId[id].name);
+      });
+      var warn = special.length
+        ? '⚠ 本局含 ' + special.join('、') + '，互认要按各自能力文本特殊处理：疯子看到的"爪牙"其实是镇民、提线木偶不知道自己是邪恶、间谍在恶魔眼中可显示为镇民、罂粟种植者让邪恶方首夜互不相认。'
+        : '';
+
+      return {
+        info: info, detail: detail, say: say, warn: warn, reroll: true,
+        actions: [
+          {
+            label: '✅ 记录：已完成互认', run: function () {
+              c.log('夜晚 · 恶魔与爪牙互认：恶魔 ' + (demons.map(function (s) { return s.n + '号'; }).join('、') || '无') +
+                ' ↔ 爪牙 ' + (minions.map(function (s) { return s.n + '号'; }).join('、') || '无') + '；' + bluffText, 'night');
+            }
+          },
+          {
+            label: '📋 复制伪装牌（发恶魔）', run: function () {
+              c.log('给恶魔的伪装牌：' + bluffs.map(function (r) { return r.name; }).join('、'), 'night');
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(bluffText).then(function () { }, function () { });
+              }
+            }
+          }
+        ]
+      };
+    }
+  });
+
+  /* =========================================================
    *  暗流涌动 Trouble Brewing
    * ========================================================= */
   def('washerwoman', {
