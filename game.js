@@ -146,9 +146,11 @@
     }
 
     html += '<div class="qbtns">' +
-      (cfg.roles ? '<button class="btn primary" data-gstart="1">确认并开始对局</button>' : '<button class="btn primary" data-gdeal="1">随机发牌</button>') +
-      (cfg.roles ? '<button class="btn" data-gdeal="1">重新发牌</button>' : '') +
-      '</div>';
+      '<button class="btn primary" data-gdraw="1">🧰 让玩家自己抽角色（抽签台）›</button>' +
+      (cfg.roles ? '<button class="btn" data-gstart="1">确认并开始对局</button><button class="btn" data-gdeal="1">重新发牌</button>'
+        : '<button class="btn" data-gdeal="1">（备用）系统一键发牌</button>') +
+      '</div>' +
+      '<div class="note">推荐走「抽签台」：玩家可以自己点开抽取自己的角色（本机轮流抽 / 远程发链接），系统不会提前替任何人发牌。</div>';
 
     view().innerHTML = html;
   }
@@ -163,6 +165,12 @@
   function startGame() {
     var cfg = UI.newCfg;
     if (!cfg || !cfg.roles) { alert('请先点击「随机发牌」'); return; }
+    syncNames();
+    beginGame(cfg);
+  }
+
+  /* 供抽签台调用：cfg = {ed,n,names[],roles[](id),travelers[],fabled[]} */
+  function beginGame(cfg) {
     try {
       var seats = cfg.roles.map(function (rid, i) {
       return {
@@ -371,6 +379,7 @@
       (G.phase === 'day' ? '<button class="btn primary" data-gtoday="1">进入白天（提名 / 投票）</button>' : '') +
       (G.phase === 'day' ? '<button class="btn" data-gtonight="1">直接进入夜晚</button>' : '') +
       '<button class="btn" data-glog="1">对局日志</button>' +
+      '<button class="btn" data-ganalyze="1">📊 对局分析</button>' +
       '<button class="btn" data-gboard="1">公开看板（投屏）</button>' +
       '<button class="btn" data-gnew="1">新建一局</button>' +
       '</div></div>';
@@ -1007,6 +1016,8 @@
     if (e.target.closest('[data-gnight]')) { location.hash = '#/game/night'; return; }
     if (e.target.closest('[data-gtoday]')) { location.hash = '#/game/day'; return; }
     if (e.target.closest('[data-glog]')) { location.hash = '#/game/log'; return; }
+    if (e.target.closest('[data-ganalyze]')) { location.hash = '#/analyze'; return; }
+    if (e.target.closest('[data-gdraw]')) { location.hash = '#/draw'; return; }
     if (e.target.closest('[data-gboard]')) { location.hash = '#/board'; return; }
     if (e.target.closest('[data-gnew]')) { UI.newCfg = null; location.hash = '#/game/new'; return; }
     if (e.target.closest('[data-gtonight]')) { toNight(); return; }
@@ -1142,5 +1153,26 @@
     location.hash = '#/game/day';
   }
 
-  window.BOTCGame = { route: route, hasGame: function () { return !!G; } };
+  window.BOTCGame = {
+    route: route,
+    hasGame: function () { return !!G; },
+    get: function () { return G; },
+    byId: byId,
+    TEAMCN: TEAMCN,
+    roleOf: function (id) { return byId[id] || null; },
+    startWith: function (cfg) { beginGame(cfg); },
+    edName: EDNAME,
+    /* 抽签台用：按配比随机生成一池角色（不分配座位），返回角色 id 数组 */
+    rollPool: function (ed, n) { return deal(ed, n).roles.map(function (r) { return r.id; }); },
+    jinxCheck: function (ids) {
+      var names = ids.map(function (i) { return (byId[i] || {}).name; }).filter(Boolean);
+      if (!JX) JX = jinxPairs();
+      var out = [];
+      for (var i = 0; i < names.length; i++)
+        for (var j = i + 1; j < names.length; j++)
+          if (JX[names[i] + '|' + names[j]]) out.push(names[i] + ' × ' + names[j]);
+      return out;
+    },
+    composition: function (n) { return D.composition[Math.min(Math.max(n - 5, 0), D.composition.length - 1)]; }
+  };
 })();

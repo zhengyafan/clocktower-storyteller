@@ -111,10 +111,22 @@
   function route() {
     var r = parseHash();
     window.scrollTo(0, 0);
-    /* 对局 / 看板 / 玩家角色卡 交给 game.js */
+    /* 对局 / 看板 / 玩家角色卡 交给 game.js；抽签台 / 分析 交给各自模块 */
     if ((r.p === 'game' || r.p === 'board' || r.p === 'pc') && window.BOTCGame) {
       window.BOTCGame.route(r);
       $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === r.p); });
+      $('#q').blur();
+      return;
+    }
+    if (r.p === 'draw' && window.BOTCDraw) {
+      window.BOTCDraw.route(r);
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'game'); });
+      $('#q').blur();
+      return;
+    }
+    if (r.p === 'analyze' && window.BOTCAnalyze) {
+      window.BOTCAnalyze.route(r);
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'game'); });
       $('#q').blur();
       return;
     }

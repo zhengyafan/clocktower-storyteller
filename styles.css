@@ -385,3 +385,23 @@ table.tb td:first-child{font-weight:700;background:var(--bg-soft)}
   padding:8px 10px;font-size:12.5px;line-height:1.6;margin-top:8px}
 .abauto{background:#eef6ff;border:1px solid #cfe0f5;color:#2c5282;border-radius:10px;
   padding:8px 10px;font-size:12.5px;margin-top:8px}
+
+/* ---------- 抽签台 ---------- */
+.baggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:8px}
+.bagcard{border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center;background:#fff;cursor:pointer}
+.bagcard:active{transform:scale(.97)}
+.bagcard .bn{font-size:10px;color:var(--text-faint);font-weight:700}
+.bagcard .bt{font-size:19px;font-weight:800;margin:6px 0 2px;line-height:1.25}
+.bagcard .bs{font-size:12px;color:var(--text-dim)}
+.bagcard .bh{font-size:11px;color:var(--text-faint);margin-top:4px;line-height:1.5}
+.bagcard.back{background:linear-gradient(150deg,#39232f,#6b2c3c);color:#f7e9ec;border-color:#5c2c38}
+.bagcard.back .bn,.bagcard.back .bs,.bagcard.back .bh{color:#e6c9d0}
+.bagcard.got{background:var(--bg-soft)}
+.bagcard.open.t-townsfolk{background:var(--good-soft)}
+.bagcard.open.t-outsider{background:var(--outsider-soft)}
+.bagcard.open.t-minion,.bagcard.open.t-demon{background:var(--evil-soft)}
+.bagcard.open.t-traveler{background:var(--traveler-soft)}
+textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertical}
+.kv span{color:var(--text-faint);white-space:nowrap}
+.kv b{font-weight:600}
+.sttable tr.dead td{color:var(--text-faint);text-decoration:line-through}
