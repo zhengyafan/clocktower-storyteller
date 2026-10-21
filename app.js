@@ -26,6 +26,13 @@
   var ED_NAME = {};
   D.editions.forEach(function (e) { ED_NAME[e.id] = e.name; });
 
+  /* 夜晚真实序号（官方 order 值是带间隔的权重，不是序号） */
+  var NPOS = { first: {}, other: {} };
+  ['first', 'other'].forEach(function (k) {
+    (D.nightOrder[k] || []).forEach(function (x, i) { NPOS[k][x.id] = i + 1; });
+  });
+  function npos(r, k) { return NPOS[k][r.id] || 0; }
+
   /* ---------------- 本地存储 ---------------- */
   var LS = {
     get: function (k, d) { try { var v = localStorage.getItem('botc_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
@@ -59,10 +66,57 @@
   }
   function nightTag(r) {
     var p = [];
-    if (r.firstNight) p.push('首夜 ' + r.firstNight);
-    if (r.otherNight) p.push('夜 ' + r.otherNight);
+    if (npos(r, 'first')) p.push('首夜 ' + npos(r, 'first'));
+    if (npos(r, 'other')) p.push('夜 ' + npos(r, 'other'));
     return p.length ? '<span class="tag night">' + p.join(' · ') + '</span>' : '';
   }
+
+  /* ---------------- 百科全文（wiki.js）按需加载 ----------------
+   * core.js 只含检索用的轻量数据；百科全文 5MB 在需要时才拉，加载后回填到 D 上，
+   * 这样页面里所有 r.wiki / r.html 的用法保持不变。 */
+  var Wiki = {
+    data: null,
+    state: 0,          /* 0 未开始 1 加载中 2 已就绪 3 失败 */
+    cbs: [],
+    load: function (cb) {
+      if (cb) this.cbs.push(cb);
+      if (this.state === 2) { this.flush(); return; }
+      if (this.state === 1 || this.state === 3) return;
+      this.state = 1;
+      var self = this;
+      var s = document.createElement('script');
+      s.src = 'wiki.js';
+      s.onload = function () { self.ready(window.BOTC_WIKI || {}); };
+      s.onerror = function () { self.state = 3; self.flush(); };
+      document.head.appendChild(s);
+    },
+    ready: function (w) {
+      this.data = w;
+      this.state = 2;
+      var R = w.r || {}, F = w.f || {}, E = w.e || {}, U = w.u || {};
+      D.roles.forEach(function (r) { if (R[r.id]) r.wiki = R[r.id]; });
+      D.fabled.forEach(function (r) { if (F[r.id]) r.wiki = F[r.id]; });
+      D.editions.forEach(function (e) { if (E[e.id]) e.wiki = E[e.id]; });
+      D.rules.forEach(function (r) { if (U[r.id]) { r.html = U[r.id].html; r.sections = U[r.id].sections; } });
+      IDX = null;               /* 让搜索索引把百科内容也算进去 */
+      this.flush();
+    },
+    flush: function () {
+      var cs = this.cbs; this.cbs = [];
+      cs.forEach(function (f) { try { f(); } catch (e) { } });
+    },
+    /* 页面需要百科：已就绪直接回调，否则先占位提示、加载完再重渲染本页 */
+    need: function (rerender) {
+      if (this.state === 2) return false;
+      this.load(function () { rerender(); });
+      return true;
+    }
+  };
+  function wikiPendingBox(what) {
+    return '<div class="card" style="margin-top:12px;padding:12px 14px" id="wikibox">' +
+      '<div class="note">📖 ' + esc(what) + '首次打开需加载百科全文（约 1 MB，一次加载后本机缓存）…</div></div>';
+  }
+  function stillOn(p, a) { var h = parseHash(); return h.p === p && (!a || h.a === a); }
 
   /* ---------------- 搜索索引（首次搜索时构建） ---------------- */
   var IDX = null;
@@ -130,6 +184,12 @@
       $('#q').blur();
       return;
     }
+    if (r.p === 'qa' && window.BOTCQA) {
+      window.BOTCQA.route(r);
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'qa'); });
+      $('#q').blur();
+      return;
+    }
     switch (r.p) {
       case 'home': renderHome(); break;
       case 'roles': renderRoles(); break;
@@ -180,6 +240,10 @@
       '<div><b>' + D.meta.fabledCount + '</b>传奇角色</div>' +
       '<div><b>' + D.meta.ruleCount + '</b>规则条目</div>' +
       '<div><b>' + D.meta.jinxCount + '</b>相克规则</div>' +
+      '</div>' +
+      '<div class="qbtns" style="margin-top:12px">' +
+      '<a class="btn primary" href="#/qa">❓ 有问题？直接问（含情境推演）</a>' +
+      '<a class="btn" href="#/game/new">🕯️ 开一局（玩家自己抽角色）</a>' +
       '</div></div>' +
 
       '<div class="sec-title"><h2>剧本 / 角色合集</h2></div>' +
@@ -286,7 +350,7 @@
       '<div class="ability-box">' + esc(r.ability) + '</div>' +
       (r.flavor ? '<div class="flavor">' + esc(r.flavor) + '</div>' : '') +
       '<dl class="kv">' +
-      '<dt>夜晚顺序</dt><dd>' + (r.firstNight ? '首夜第 ' + r.firstNight + ' 位' : '首夜不行动') + ' ／ ' + (r.otherNight ? '其他夜晚第 ' + r.otherNight + ' 位' : '其他夜晚不行动') + '</dd>' +
+      '<dt>夜晚顺序</dt><dd>' + (npos(r, 'first') ? '首夜第 ' + npos(r, 'first') + ' 位' : '首夜不行动') + ' ／ ' + (npos(r, 'other') ? '其他夜晚第 ' + npos(r, 'other') + ' 位' : '其他夜晚不行动') + '</dd>' +
       (r.setup ? '<dt>设置阶段</dt><dd>需要在游戏开始前进行设置</dd>' : '') +
       ((r.reminders && r.reminders.length) ? '<dt>提示标记</dt><dd>' + r.reminders.map(function (x) { return '<span class="pill">' + esc(x) + '</span>'; }).join('') + '</dd>' : '') +
       ((r.remindersGlobal && r.remindersGlobal.length) ? '<dt>全局提示</dt><dd>' + r.remindersGlobal.map(function (x) { return '<span class="pill">' + esc(x) + '</span>'; }).join('') + '</dd>' : '') +
@@ -299,6 +363,8 @@
       view.innerHTML += '<div class="card" style="margin-top:12px"><div class="wiki">' +
         secs.map(function (s) { return '<h4>' + esc(s.title) + '</h4>' + s.html; }).join('') +
         '</div></div>';
+    } else if (Wiki.need(function () { if (stillOn('role', id)) renderRole(id); })) {
+      view.innerHTML += wikiPendingBox('角色范例 / 运作方式 / 说书人技巧');
     }
     if (jx.length) {
       view.innerHTML += '<div class="sec-title"><h2>相关相克规则</h2><span class="more">' + jx.length + ' 条</span></div>' +
@@ -327,9 +393,13 @@
     var r = null;
     D.rules.forEach(function (x) { if (x.id === id) r = x; });
     if (!r) { view.innerHTML = '<div class="empty">未找到规则</div>'; return; }
+    var body = r.html ? r.html : '<div class="rule-html">' + esc(r.text || '').replace(/\n+/g, '<br>') + '</div>';
     view.innerHTML = '<div class="backbar"><button data-back="1">‹ 返回</button><span style="font-size:12px;color:var(--text-faint)">' + esc(r.catName) + '</span></div>' +
       '<div class="card"><div style="padding:14px 14px 0"><h1 style="margin:0;font-size:19px">' + esc(r.title) + '</h1></div>' +
-      '<div class="rule-html">' + r.html + '</div></div>';
+      '<div class="rule-html">' + body + '</div></div>';
+    if (!r.html && Wiki.need(function () { if (stillOn('rule', id)) renderRule(id); })) {
+      view.innerHTML += wikiPendingBox('规则全文与示例');
+    }
   }
 
   /* ---------------- 相克规则 ---------------- */
@@ -419,6 +489,7 @@
       '<div class="sub" style="font-size:12px;color:var(--text-faint)">' + esc(e.playerNum) + (e.level ? ' · 难度 ' + e.level : '') + '</div></div>' +
       (e.description ? '<div class="rule-html" style="padding-top:0">' + e.description + '</div>' : '') + '</div>';
     if (e.wiki) html += '<div class="card" style="margin-top:12px"><div class="wiki">' + e.wiki.html + '</div></div>';
+    else if (Wiki.need(function () { if (stillOn('edition', id)) renderEdition(id); })) html += wikiPendingBox('剧本介绍全文');
     html += '<div class="sec-title"><h2>角色一览</h2><span class="more">' + e.roles.length + ' 个</span></div>';
     html += order.map(function (t) {
       var g = e.roles.map(function (i) { return byId[i]; }).filter(function (r) { return r && r.team === t; });
@@ -547,6 +618,12 @@
       rows += '<tr><td>' + n + ' 人</td><td>' + c.townsfolk + '</td><td>' + c.outsider + '</td><td>' + c.minion + '</td><td>' + c.demon + '</td></tr>';
     }
     view.innerHTML =
+      '<div class="sec-title"><h2>智能问答 / 局面分析</h2></div>' +
+      '<div class="card" style="padding:12px 14px">' +
+      '<div class="note">输入任何规则或角色问题（如「共情者两边都是善良给几」「小恶魔和男爵能同局吗」），' +
+      '工具会给出结论、规则依据、推演过程与说书人提示，并可直接在情境分析器里摆局面实际算一遍。</div>' +
+      '<div class="qbtns"><a class="btn primary" href="#/qa">❓ 进入问答</a></div></div>' +
+
       '<div class="sec-title"><h2>玩家人数与角色配比</h2></div>' +
       '<div style="overflow-x:auto"><table class="tb"><tr><th>人数</th><th>镇民</th><th>外来者</th><th>爪牙</th><th>恶魔</th></tr>' + rows + '</table></div>' +
       '<div class="note">该表为标准设置表；部分角色（如 [[男爵]]、[[教父]]、[[哨兵]] 等）会额外调整外来者数量。旅行者不计入表中人数。</div>' +
@@ -690,4 +767,13 @@
   window.addEventListener('hashchange', route);
   if (!location.hash) location.hash = '#/home';
   route();
+
+  /* 首屏渲染完再空闲预取百科全文：弱网 / 省流量模式不预取 */
+  setTimeout(function () {
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn && (conn.saveData || /2g/.test(conn.effectiveType || ''))) return;
+    var prefetch = function () { Wiki.load(function () { }); };
+    if (window.requestIdleCallback) window.requestIdleCallback(prefetch, { timeout: 8000 });
+    else setTimeout(prefetch, 1200);
+  }, 1500);
 })();

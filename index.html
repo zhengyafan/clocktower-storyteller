@@ -7,6 +7,17 @@
 <meta name="theme-color" content="#8b1e2d">
 <title>染·钟楼谜团 说书人备考手册</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="preload" href="core.js" as="script">
+<style>
+/* 首屏骨架：避免白屏，脚本加载完即被替换 */
+#boot{padding:18px 14px}
+.sk{background:linear-gradient(90deg,#f0eef2 25%,#f7f6f9 37%,#f0eef2 63%);background-size:400% 100%;
+    animation:sk 1.2s ease-in-out infinite;border-radius:10px}
+@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.sk.h{height:96px;margin-bottom:12px}
+.sk.t{height:18px;width:40%;margin:0 0 10px}
+.sk.l{height:56px;margin-bottom:8px}
+</style>
 </head>
 <body>
 
@@ -22,10 +33,19 @@
   </div>
 </header>
 
-<main id="view"><div class="loading">数据加载中…</div></main>
+<main id="view">
+  <div id="boot">
+    <div class="sk h"></div>
+    <div class="sk t"></div>
+    <div class="sk l"></div>
+    <div class="sk l"></div>
+    <div class="sk l" style="width:70%"></div>
+  </div>
+</main>
 
 <nav class="tabbar" id="tabbar">
   <a href="#/home" data-p="home"><span class="ic">🏠</span>首页</a>
+  <a href="#/qa" data-p="qa"><span class="ic">❓</span>问答</a>
   <a href="#/roles" data-p="roles"><span class="ic">🎭</span>角色</a>
   <a href="#/rules" data-p="rules"><span class="ic">📜</span>规则</a>
   <a href="#/jinxes" data-p="jinxes"><span class="ic">⚔️</span>相克</a>
@@ -34,11 +54,12 @@
   <a href="#/tools" data-p="tools"><span class="ic">🧰</span>工具</a>
 </nav>
 
-<script src="data.js"></script>
-<script src="ability.js"></script>
-<script src="game.js"></script>
-<script src="draw.js"></script>
-<script src="analyze.js"></script>
-<script src="app.js"></script>
+<script defer src="core.js"></script>
+<script defer src="ability.js"></script>
+<script defer src="game.js"></script>
+<script defer src="draw.js"></script>
+<script defer src="analyze.js"></script>
+<script defer src="qa.js"></script>
+<script defer src="app.js"></script>
 </body>
 </html>
