@@ -425,3 +425,20 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .tabbar{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .tabbar::-webkit-scrollbar{display:none}
 .tabbar a{flex:1 0 auto;min-width:46px;padding:0 2px}
+
+/* ---------- 对外分享页 ---------- */
+.shqr{text-align:center}
+.qrbox{display:flex;justify-content:center;padding:6px 0 2px}
+.qrbox canvas{border-radius:12px;border:1px solid var(--line);background:#fff}
+.shurl{font-size:12px;word-break:break-all;color:var(--text-dim);background:var(--bg-soft);
+  border-radius:8px;padding:8px 10px;margin:10px 0 12px;line-height:1.6}
+.shtext{font-size:13px;line-height:1.8;color:var(--text-dim);background:var(--bg-soft);
+  border-radius:8px;padding:10px 12px}
+.shtext b{color:var(--text);font-weight:600}
+.shstep{display:flex;gap:10px;margin:10px 0;font-size:13.5px;line-height:1.65}
+.shstep span{flex:0 0 20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:700;margin-top:1px}
+.shstep b{display:block}
+.shhow{font-size:13.5px;line-height:1.75;background:var(--bg-soft);border-radius:8px;padding:10px 12px;margin:8px 0}
+.shnote div{font-size:13px;line-height:1.8;color:var(--text-dim);margin:5px 0}
+.shnote b{color:var(--text)}

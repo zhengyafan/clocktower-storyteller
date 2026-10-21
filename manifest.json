@@ -1,0 +1,16 @@
+{
+  "name": "染·钟楼谜团 说书人魔典",
+  "short_name": "说书人魔典",
+  "description": "角色规则查询 + 可直接开局的线上说书人工具：玩家自己抽角色、夜晚能力自动计算、恶魔出局自动复盘。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#8b1e2d",
+  "theme_color": "#8b1e2d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

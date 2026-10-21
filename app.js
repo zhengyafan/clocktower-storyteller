@@ -184,6 +184,12 @@
       $('#q').blur();
       return;
     }
+    if (r.p === 'share' && window.BOTCShare) {
+      window.BOTCShare.route();
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', false); });
+      $('#q').blur();
+      return;
+    }
     if (r.p === 'qa' && window.BOTCQA) {
       window.BOTCQA.route(r);
       $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'qa'); });
@@ -244,6 +250,7 @@
       '<div class="qbtns" style="margin-top:12px">' +
       '<a class="btn primary" href="#/qa">❓ 有问题？直接问（含情境推演）</a>' +
       '<a class="btn" href="#/game/new">🕯️ 开一局（玩家自己抽角色）</a>' +
+      '<a class="btn" href="#/share">📤 分享给朋友 / 玩家</a>' +
       '</div></div>' +
 
       '<div class="sec-title"><h2>剧本 / 角色合集</h2></div>' +
@@ -271,6 +278,7 @@
       '<div class="tile" data-go="#/night"><div class="em">🌙</div><div class="t">夜晚行动顺序</div><div class="d">首夜 / 其他夜晚</div></div>' +
       '<div class="tile" data-go="#/quiz"><div class="em">🎯</div><div class="t">答题练习</div><div class="d">能力↔角色 / 相克</div></div>' +
       '<div class="tile" data-go="#/tools"><div class="em">🧰</div><div class="t">说书人工具</div><div class="d">人数配比 / 随机组局</div></div>' +
+      '<div class="tile" data-go="#/share"><div class="em">📤</div><div class="t">分享给朋友</div><div class="d">二维码 / 链接 / 装桌面</div></div>' +
       '</div>' +
       recHtml + favHtml +
       '<div class="note" style="margin-top:18px">数据来源：官方魔典角色接口（clocktower.gstonegames.com）+ 钟楼百科（clocktower-wiki.gstonegames.com），生成于 ' + D.meta.generated + '。</div>';
@@ -618,6 +626,11 @@
       rows += '<tr><td>' + n + ' 人</td><td>' + c.townsfolk + '</td><td>' + c.outsider + '</td><td>' + c.minion + '</td><td>' + c.demon + '</td></tr>';
     }
     view.innerHTML =
+      '<div class="sec-title"><h2>分享给朋友 / 玩家</h2></div>' +
+      '<div class="card" style="padding:12px 14px">' +
+      '<div class="note">生成二维码与链接发给朋友：免登录、手机浏览器直接打开，装到桌面后断网也能用。</div>' +
+      '<div class="qbtns"><a class="btn primary" href="#/share">📤 打开分享页</a></div></div>' +
+
       '<div class="sec-title"><h2>智能问答 / 局面分析</h2></div>' +
       '<div class="card" style="padding:12px 14px">' +
       '<div class="note">输入任何规则或角色问题（如「共情者两边都是善良给几」「小恶魔和男爵能同局吗」），' +

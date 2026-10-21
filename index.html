@@ -4,8 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="说书人魔典">
 <meta name="theme-color" content="#8b1e2d">
-<title>染·钟楼谜团 说书人备考手册</title>
+<meta name="description" content="染·钟楼谜团说书人工具：205 个角色与全部规则、相克、夜晚顺序查询；可直接开局——玩家自己抽角色、夜晚能力自动计算、恶魔出局自动复盘。免登录，手机直接用。">
+<title>染·钟楼谜团 说书人魔典 · 查询 / 开局 / 复盘</title>
+<link rel="canonical" href="https://zhengyafan.github.io/clocktower-storyteller/">
+<!-- 分享卡片（微信 / QQ / 微博等抓取） -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="染·钟楼谜团 说书人魔典">
+<meta property="og:description" content="角色规则查询 + 可直接开局的线上说书人工具：玩家自己抽角色、夜晚能力自动计算、恶魔出局自动复盘。免登录，手机直接用。">
+<meta property="og:image" content="https://zhengyafan.github.io/clocktower-storyteller/og.png">
+<meta property="og:url" content="https://zhengyafan.github.io/clocktower-storyteller/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="styles.css">
 <link rel="preload" href="core.js" as="script">
 <style>
@@ -55,11 +70,22 @@
 </nav>
 
 <script defer src="core.js"></script>
+<script defer src="qrcode.js"></script>
+<script defer src="qr.js"></script>
 <script defer src="ability.js"></script>
 <script defer src="game.js"></script>
 <script defer src="draw.js"></script>
 <script defer src="analyze.js"></script>
 <script defer src="qa.js"></script>
+<script defer src="share.js"></script>
 <script defer src="app.js"></script>
+<script>
+/* 离线缓存：注册 Service Worker（失败忽略，不影响使用） */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { });
+  });
+}
+</script>
 </body>
 </html>
