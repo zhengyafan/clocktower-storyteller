@@ -64,11 +64,23 @@
     });
     return Object.keys(st).map(function (k) { return st[k]; });
   }
+  var ENDREASON = {
+    demon_dead: '恶魔出局 —— 善良阵营获胜',
+    all_dead: '全员出局',
+    two_left: '场上仅剩 2 人，邪恶阵营获胜',
+    manual: '说书人判定'
+  };
+  function endReasonText(r) { return ENDREASON[r] || '对局结束'; }
+
   function fmtDur(ms) {
     if (!ms || ms < 0) return '—';
     var m = Math.round(ms / 60000);
     if (m < 60) return m + ' 分钟';
     return Math.floor(m / 60) + ' 小时 ' + (m % 60) + ' 分';
+  }
+  function durOf(G) {
+    if (!G.startedAt) return '—';
+    return fmtDur((G.endedAt || Date.now()) - G.startedAt);
   }
 
   /* ---------------- 结论生成 ---------------- */
@@ -84,8 +96,28 @@
 
     demons.forEach(function (s) {
       var r = roleOf(s);
-      out.push('恶魔是 ' + s.n + '号 ' + s.name + '（' + (r ? r.name : '?') + '），' + (s.alive ? '存活到最后' : '在第 ' + (s.deadDay || '?') + ' 天出局') + '。');
+      var rnm = (UI.spoiler && r) ? r.name : '？？？';
+      out.push('恶魔是 ' + s.n + '号 ' + s.name + '（' + rnm + '），' + (s.alive ? '存活到最后' : '在第 ' + (s.deadDay || '?') + ' 天出局') + '。');
     });
+
+    /* 终局原因 */
+    if (G.winner) {
+      var er = G.endReason || 'manual';
+      var d0 = demons[0] || null;
+      if (er === 'demon_dead' && d0) {
+        var how = (G.noms || []).some(function (v) { return v.to === d0.n && v.result === 'exec'; }) ? '被处决' : '在夜晚出局';
+        out.push('终局：恶魔 ' + d0.n + '号 ' + d0.name + ' 第 ' + (d0.deadDay || '?') + ' 天' + how +
+          '，场上再无恶魔 → 按规则立即宣布善良阵营胜利，对局结束。');
+      } else if (er === 'two_left') {
+        out.push('终局：场上仅剩 2 名存活玩家，邪恶阵营获胜。');
+      } else if (er === 'all_dead') {
+        out.push('终局：全员出局，邪恶阵营获胜。');
+      } else {
+        out.push('终局：由说书人判定结束。');
+      }
+    } else {
+      out.push('对局仍在进行中（尚未判定胜负），以上为实时数据。');
+    }
     out.push('结束时存活 ' + alive.length + ' 人，其中邪恶方 ' + evilAlive.length + ' 人；出局 ' + dead.length + ' 人。');
 
     var infos = nightInfos(G);
@@ -114,6 +146,14 @@
     if (quiet.length) out.push('全程未投票也未提名：' + quiet.map(function (p) { return p.n + '号 ' + p.name; }).join('、') + '。');
     return out;
   }
+  /* 剧透保护：把文本里出现的本局角色名遮掉（长名优先，避免部分替换） */
+  function mask(text, G) {
+    if (UI.spoiler) return text;
+    var names = G.seats.map(function (s) { var r = roleOf(s); return r ? r.name : ''; })
+      .filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+    names.forEach(function (n) { text = text.split(n).join('？？？'); });
+    return text;
+  }
   function seatOf(G, n) { for (var i = 0; i < G.seats.length; i++) if (G.seats[i].n === n) return G.seats[i]; return null; }
 
   /* ---------------- 战报 ---------------- */
@@ -123,7 +163,8 @@
     L.push('');
     L.push('- 剧本：' + edName(G.edition) + ' · ' + G.seats.length + ' 人');
     L.push('- 结果：' + (G.winner === 'good' ? '善良阵营胜利' : G.winner === 'evil' ? '邪恶阵营胜利' : '进行中') +
-      '（第 ' + G.day + ' 天' + (G.startedAt ? '，用时约 ' + fmtDur(Date.now() - G.startedAt) : '') + '）');
+      (G.winner ? '（' + endReasonText(G.endReason) + '）' : '') +
+      '（第 ' + G.day + ' 天' + (G.startedAt ? '，用时约 ' + durOf(G) : '') + '）');
     L.push('');
     L.push('## 座位与角色');
     L.push('| 座 | 玩家 | 角色 | 阵营 | 结局 |');
@@ -190,6 +231,15 @@
     var h = '<div class="backbar"><button data-aback="1">‹ 魔典</button>' +
       '<span style="font-size:12px;color:var(--text-faint)">对局分析 · 复盘</span></div>';
 
+    if (G.winner) {
+      h += '<div class="card winbox" style="margin-top:10px"><div class="wt">' +
+        (G.winner === 'good' ? '善良阵营胜利 🎉' : '邪恶阵营胜利 😈') + '</div>' +
+        '<div class="note">' + esc(endReasonText(G.endReason)) + ' · 共 ' + G.day + ' 个白天 · 用时 ' + durOf(G) + '</div></div>';
+    } else {
+      h += '<div class="card" style="margin-top:10px;padding:10px 12px;background:#fff6e5;border:1px solid #f0d3a0">' +
+        '<div style="font-size:13px;color:#8a5a1f">对局仍在进行中，以下为实时复盘数据（恶魔出局时会自动结束并跳到本页）。</div></div>';
+    }
+
     /* 概览 */
     h += '<div class="card" style="padding:12px 14px"><div class="ftl">概览</div>' +
       '<div class="kv"><span>剧本</span><b>' + esc(edName(G.edition)) + '</b></div>' +
@@ -197,7 +247,8 @@
       '<div class="kv"><span>进度</span><b>第 ' + G.day + ' 天 · ' +
       (G.phase === 'night' ? '夜晚' : G.phase === 'day' ? '白天' : G.phase === 'setup' ? '准备' : '已结束') + '</b></div>' +
       '<div class="kv"><span>结果</span><b>' + (G.winner === 'good' ? '善良阵营胜利 🎉' : G.winner === 'evil' ? '邪恶阵营胜利 😈' : '进行中') + '</b></div>' +
-      '<div class="kv"><span>用时</span><b>' + (G.startedAt ? fmtDur(Date.now() - G.startedAt) : '—') + '</b></div>' +
+      (G.winner ? '<div class="kv"><span>终局原因</span><b>' + esc(endReasonText(G.endReason)) + '</b></div>' : '') +
+      '<div class="kv"><span>用时</span><b>' + durOf(G) + (G.endedAt ? '（已结束）' : '（进行中）') + '</b></div>' +
       '<div class="qbtns" style="margin-top:10px"><button class="btn" data-aspoil="1">' + (UI.spoiler ? '隐藏角色真相' : '显示角色真相') + '</button></div></div>';
 
     /* 座位真相 */
@@ -206,6 +257,8 @@
       G.seats.map(function (s) {
         var r = roleOf(s);
         var nm = UI.spoiler ? (r ? esc(r.name) : '—') : '？？？';
+        if (UI.spoiler && r && r.team === 'demon') nm += ' 😈';
+        if (UI.spoiler && r && r.team === 'minion') nm += ' 👿';
         var tm = UI.spoiler ? (r ? TEAMCN[r.team] : '—') : '？';
         return '<tr class="' + (s.alive ? '' : 'dead') + '"><td>' + s.n + '</td><td>' + esc(s.name) + '</td>' +
           '<td>' + nm + '</td><td>' + (UI.spoiler && r ? '<span class="tag t-' + r.team + '">' + esc(tm) + '</span>' : tm) + '</td>' +
@@ -227,7 +280,7 @@
     h += '<div class="card" style="margin-top:12px;padding:12px 14px"><div class="ftl">出局时间线（' + ds.length + '）</div>' +
       (ds.length ? ds.map(function (d) {
         return '<div class="nrow"><div class="no">' + (d.kind === '处决' ? '⚖️' : '💀') + '</div><div><div class="nm">第 ' + d.day + ' 天</div>' +
-          '<div class="rm">' + esc(d.text) + '</div></div></div>';
+          '<div class="rm">' + esc(mask(d.text, G)) + '</div></div></div>';
       }).join('') : '<div class="note">还没有人出局</div>') + '</div>';
 
     /* 提名投票 */

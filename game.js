@@ -347,8 +347,11 @@
 
     if (G.winner) {
       html += '<div class="card winbox"><div class="wt">' + (G.winner === 'good' ? '善良阵营胜利 🎉' : '邪恶阵营胜利 😈') + '</div>' +
-        '<div class="note">可查看日志复盘，或新建一局。</div></div>';
+        '<div class="note">' + esc(endReasonText(G.endReason)) + ' · 第 ' + G.day + ' 天结束。</div>' +
+        '<div class="qbtns"><button class="btn primary" data-ganalyze="1">📊 复盘分析本局</button>' +
+        '<button class="btn" data-glog="1">对局日志</button></div></div>';
     }
+    html += pendingEndHtml();
 
     html += '<div class="seatgrid">' + G.seats.map(function (s) {
       var r = roleOf(s);
@@ -461,7 +464,7 @@
       }
       if (e.target.closest('[data-gkill]')) {
         s.alive = !s.alive;
-        if (!s.alive) { s.deadDay = G.day; log(s.n + '号 ' + s.name + ' 死亡（' + (r ? r.name : '?') + '）', 'death'); checkWin(); }
+        if (!s.alive) { s.deadDay = G.day; log(s.n + '号 ' + s.name + ' 死亡（' + (r ? r.name : '?') + '）', 'death'); checkWin(true); }
         else log(s.n + '号 ' + s.name + ' 复活', 'mark');
         save(); closeSheet(); renderGrimoire(); return;
       }
@@ -544,6 +547,8 @@
     var i = Math.min(G.nightStep, list.length);
     var html = '<div class="backbar"><button data-gback2="1">‹ 魔典</button><span style="font-size:12px;color:var(--text-faint)">' +
       (G.night === 'first' ? '首个夜晚' : '第 ' + G.day + ' 夜') + ' · ' + (i + 1) + '/' + list.length + '</span></div>';
+
+    html += pendingEndHtml();
 
     html += '<div class="card" style="padding:10px 12px"><div class="nprog"><div class="bar" style="width:' +
       (list.length ? Math.round(i / list.length * 100) : 0) + '%"></div></div></div>';
@@ -693,6 +698,7 @@
     if (!c || !c.res || !c.res.actions || !c.res.actions[i]) return;
     c.res.actions[i].run();
     save();
+    checkWin(true);
     renderNight();
   }
 
@@ -784,7 +790,9 @@
         var c = UI.abRes;
         if (c && c.res && c.res.actions && c.res.actions[+el.dataset.gab]) {
           c.res.actions[+el.dataset.gab].run();
-          save(); closeSheet(); renderDay();
+          save(); closeSheet();
+          checkWin(true);
+          renderDay();
         }
         return;
       }
@@ -797,6 +805,8 @@
     var al = aliveSeats();
     var need = Math.ceil(al.length / 2);
     var html = '<div class="backbar"><button data-gback2="1">‹ 魔典</button><span style="font-size:12px;color:var(--text-faint)">第 ' + G.day + ' 天 · 白天（存活 ' + al.length + ' 人，处决需 ' + need + ' 票）</span></div>';
+
+    html += pendingEndHtml();
 
     html += '<div class="card" style="padding:12px 14px"><div class="ftl">讨论计时</div>' +
       '<div class="chips">' + [1, 2, 3, 5, 10].map(function (m) {
@@ -903,7 +913,7 @@
       if (s) { s.alive = false; s.deadDay = G.day; }
       G.execToday = G.day;
       log('第 ' + G.day + ' 天：' + v.to + '号 ' + (s ? s.name : '') + ' 被处决（赞成 ' + yes + '）', 'exec');
-      checkWin();
+      checkWin(true);
     } else {
       v.result = 'tie';
       log('第 ' + G.day + ' 天：' + v.by + '号 提名 ' + v.to + '号 未通过（赞成 ' + yes + ' / 门槛 ' + need + (ties.length > 1 ? '，平票' : '') + '）', 'vote');
@@ -915,19 +925,113 @@
   }
 
   /* ================= 胜负 ================= */
-  function checkWin() {
+  var ENDREASON = {
+    demon_dead: '恶魔出局 —— 善良阵营获胜',
+    all_dead: '全员出局',
+    two_left: '场上仅剩 2 人，邪恶阵营获胜',
+    manual: '说书人判定'
+  };
+  function endReasonText(r) { return ENDREASON[r] || '对局结束'; }
+
+  function isDemonSeat(s) { var r = roleOf(s); return !!(r && r.team === 'demon'); }
+  function deadDemons() {
+    return G.seats.filter(function (s) { return isDemonSeat(s) && !s.alive; });
+  }
+
+  /* 恶魔全灭时，可能存在的「继承 / 假死」情况 —— 不自动结束，交说书人决定 */
+  function successionOptions() {
+    var out = [];
+    var al = aliveSeats().length;
+    var dd = deadDemons();
+    var lastDemon = dd.length ? dd[dd.length - 1].role : 'imp';
+    G.seats.forEach(function (s) {
+      if (!s.alive || s.role !== 'scarlet_woman') return;
+      if (al >= 5) out.push({ kind: 'scarlet', n: s.n, demon: lastDemon, label: s.n + '号 ' + s.name + '（红唇女郎）接任恶魔' });
+      else out.push({ kind: 'none', n: s.n, label: '注意：存活人数不足 5，红唇女郎不触发接任' });
+    });
+    dd.forEach(function (s) {
+      if (s.role === 'zombuul' && !s.st.zombuulUsed) {
+        out.push({ kind: 'zombuul', n: s.n, label: s.n + '号 ' + s.name + '（僵怖）是假死，回到场上继续行动' });
+      }
+    });
+    return out.filter(function (o) { return o.kind !== 'none'; });
+  }
+
+  function checkWin(interactive) {
     if (G.winner) return true;
     var al = aliveSeats();
-    if (!al.length) { finish('evil'); return true; }
-    var demons = al.filter(function (s) { var r = roleOf(s); return r && r.team === 'demon'; });
-    if (!demons.length) { finish('good'); return true; }
-    if (al.length <= 2) { finish('evil'); return true; }
+    if (!al.length) { finish('evil', 'all_dead'); return true; }
+    var hasDemon = G.seats.some(isDemonSeat);
+    var demons = al.filter(isDemonSeat);
+    if (hasDemon && !demons.length) {
+      if (interactive !== false) {
+        var succ = successionOptions();
+        if (succ.length) {
+          G.pendingEnd = { winner: 'good', reason: 'demon_dead', opts: succ };
+          save();
+          return false;
+        }
+      }
+      finish('good', 'demon_dead');
+      return true;
+    }
+    if (al.length <= 2) { finish('evil', 'two_left'); return true; }
+    if (G.pendingEnd) { G.pendingEnd = null; }
     return false;
   }
-  function finish(w) {
+
+  function finish(w, reason) {
     G.winner = w; G.phase = 'over';
-    log('对局结束：' + (w === 'good' ? '善良阵营胜利' : '邪恶阵营胜利') + '（请确认是否有恶魔继承类能力尚未结算）', 'mark');
+    G.endReason = reason || 'manual';
+    G.endedAt = Date.now();
+    G.pendingEnd = null;
+    log('对局结束：' + (w === 'good' ? '善良阵营胜利' : '邪恶阵营胜利') + '（' + endReasonText(G.endReason) + '）', 'mark');
     save();
+    onGameOver();
+  }
+
+  /* 结束后自动跳到复盘分析页 */
+  function onGameOver() {
+    try { navigator.vibrate && navigator.vibrate([300, 120, 300]); } catch (e) { }
+    setTimeout(function () {
+      if (G && G.winner && window.BOTCAnalyze) location.hash = '#/analyze';
+    }, 500);
+  }
+
+  /* 恶魔出局但存在继承 / 假死时的确认卡片 */
+  function pendingEndHtml() {
+    var pe = G.pendingEnd; if (!pe) return '';
+    var dd = deadDemons().map(function (s) { return s.n + '号 ' + s.name + '（' + (roleOf(s) ? roleOf(s).name : '?') + '）'; }).join('、');
+    var h = '<div class="card winbox" style="margin-top:12px"><div class="wt">😈 恶魔已出局</div>' +
+      '<div class="note">出局恶魔：' + esc(dd || '—') + '。按官方规则，此时<b>善良阵营获胜、对局结束</b>。</div>';
+    (pe.opts || []).forEach(function (o, i) {
+      h += '<div class="qbtns" style="margin-top:8px"><button class="btn" data-gpeopt="' + i + '">' + esc(o.label) + '</button></div>';
+    });
+    if (pe.opts && pe.opts.length) {
+      h += '<div class="note">如果上面这些继承 / 假死都不适用（或你已手动处理完），直接点下面确认结束。</div>';
+    }
+    h += '<div class="qbtns" style="margin-top:8px">' +
+      '<button class="btn primary" data-gpeend="1">✅ 确认结束 · 复盘分析</button>' +
+      '<button class="btn" data-gpecancel="1">暂不结束，继续本局</button></div></div>';
+    return h;
+  }
+
+  function applySuccession(i) {
+    var pe = G.pendingEnd; if (!pe) return;
+    var o = (pe.opts || [])[i]; if (!o) return;
+    var s = seat(o.n); if (!s) return;
+    if (o.kind === 'scarlet') {
+      var did = o.demon || 'imp';
+      s.role = did;
+      log(s.n + '号 ' + s.name + '（红唇女郎）接任恶魔，变为「' + (byId[did] ? byId[did].name : did) + '」', 'mark');
+    } else if (o.kind === 'zombuul') {
+      s.alive = true; s.deadDay = null; s.st.zombuulUsed = true;
+      log(s.n + '号 ' + s.name + '（僵怖）首次死亡为假死，回到场上继续行动', 'mark');
+    }
+    G.pendingEnd = null;
+    save();
+    checkWin(false);
+    if (G.phase === 'night') renderNight(); else renderGrimoire();
   }
 
   /* ================= 日志 ================= */
@@ -1075,10 +1179,13 @@
     }
     if (e.target.closest('[data-gexport]')) { exportGame(); return; }
     if (e.target.closest('[data-gimport]')) { importGame(); return; }
-    if ((el = e.target.closest('[data-gwin]'))) {
-      G.winner = el.dataset.gwin; G.phase = 'over';
-      log('对局结束：' + (G.winner === 'good' ? '善良阵营胜利' : '邪恶阵营胜利'), 'mark'); save(); renderGrimoire(); return;
+    if ((el = e.target.closest('[data-gwin]'))) { finish(el.dataset.gwin, 'manual'); renderGrimoire(); return; }
+    if ((el = e.target.closest('[data-gpeopt]'))) { applySuccession(+el.dataset.gpeopt); return; }
+    if (e.target.closest('[data-gpeend]')) {
+      var pe = G.pendingEnd || { winner: 'good', reason: 'demon_dead' };
+      finish(pe.winner, pe.reason); renderGrimoire(); return;
     }
+    if (e.target.closest('[data-gpecancel]')) { G.pendingEnd = null; save(); renderGrimoire(); return; }
     if (e.target.closest('[data-gcopyall]')) {
       copyText(G.seats.map(function (s) {
         var r = roleOf(s);
@@ -1160,7 +1267,7 @@
     if (kind === 'kill') {
       s.alive = false; s.deadDay = G.day;
       log(nm + ' 死亡（' + (roleOf(s) ? roleOf(s).name : '') + '）', 'death');
-      checkWin();
+      checkWin(true);
     }
     save(); renderNight();
   }
@@ -1185,6 +1292,9 @@
     location.hash = '#/game/night';
   }
   function endNight() {
+    if (G.winner) { location.hash = '#/analyze'; return; }
+    if (checkWin(true)) return;
+    if (G.pendingEnd) { renderNight(); return; }
     G.day = G.day + 1;
     G.phase = 'day';
     G.seats.forEach(function (s) { s.voted = false; s.nominated = false; });
