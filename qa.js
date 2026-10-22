@@ -180,7 +180,10 @@
   /* ================= 答案结构 ================= */
   function A(title, kind) {
     return {
-      title: title, kind: kind || '', verdict: '', verdictHtml: '', why: '',
+      title: title, kind: kind || '',
+      answer: '',       /* ✅ 直接回答提问的一句话（必须有） */
+      verdict: '',      /* 结论补充/详解（与 answer 不同才显示） */
+      verdictHtml: '', why: '',
       steps: [],      /* [{t, d}] 分析过程 */
       cites: [],      /* [{src, text}] 官方依据 */
       tips: [], warns: [], links: [], follow: [], sandbox: null, calc: null
@@ -379,7 +382,7 @@
   /* ================= 各意图答案生成器 ================= */
   function answerFaq(f, q) {
     var a = A('规则速答 · ' + f.t, 'faq');
-    a.verdict = f.v;
+    a.answer = f.v;
     a.steps = f.s || [];
     if (f.tip) a.tips.push(f.tip);
     (f.follow || []).forEach(function (x) { a.follow.push(x); });
@@ -391,15 +394,42 @@
     return a;
   }
 
+  /* 能力一句话摘要（取能力文本第一句） */
+  function abilityBrief(r) {
+    var t = strip(r.ability || '');
+    var seg = t.split(/[。；;！!]/)[0] || t;
+    return cut(seg || '（无能力文本）', 80);
+  }
+
   function answerRole(r, q) {
     q = q || '';
     var a = A('角色解析 · ' + r.name, 'role');
     var np = nightPos(r);
     var teamCn = r.teamCn || TEAMCN[r.team];
     var side = (r.team === 'minion' || r.team === 'demon') ? '邪恶方' : '善良方';
+    var brief = abilityBrief(r);
+    var when = (np.f || np.o)
+      ? '首夜' + (np.f ? '第 ' + np.f + ' 位' : '不行动') + '、其他夜' + (np.o ? '第 ' + np.o + ' 位' : '不行动')
+      : '夜晚不行动（白天 / 被动能力）';
 
-    a.verdict = r.name + '：' + teamCn + '（' + side + '）・' + (r.editionCn || '—') + '。' +
-      (np.f || np.o ? '夜晚行动：' + (np.f ? '首夜第 ' + np.f + ' 位' : '首夜不行动') + ' ／ ' + (np.o ? '其他夜第 ' + np.o + ' 位' : '其他夜不行动') + '。' : '夜晚不行动（白天或被动能力）。');
+    /* ✅ 直接回答提问 */
+    if (/怎么运作|如何运作|怎么用|怎么玩|怎么用|该怎么做|要怎么做|作用|干嘛|做什么|怎么执行|如何处理|怎么给|怎么算/.test(q)) {
+      a.answer = r.name + '（' + teamCn + '・' + side + '）的做法：' + brief + '。' +
+        '说书人操作：' + (np.f ? '首夜第 ' + np.f + ' 位唤醒他' : '首夜不唤醒') +
+        (np.o ? '，之后每夜第 ' + np.o + ' 位唤醒' : '') + '，严格按能力文本给出信息即可。';
+    } else if (/强吗|厉害|好用|值得|推荐|评价|怎么样/.test(q)) {
+      a.answer = r.name + '（' + teamCn + '）：' + brief + '　评价：' +
+        (r.team === 'demon' ? '作为恶魔，强度取决于伪装与杀人节奏，需要说书人配合给好伪装牌。'
+          : r.team === 'minion' ? '爪牙的价值在干扰信息，单看能力不出彩，配合恶魔才强。'
+            : r.team === 'outsider' ? '外来者能力有副作用，对善良方是"信息 + 干扰"的双刃剑，新手局慎用。'
+              : '镇民信息位，强度稳定，是善良方推理的主力。') + '（' + when + '）';
+    } else if (/相克|冲突/.test(q)) {
+      var jx0 = jinxListOf(r.name);
+      a.answer = jx0.length ? (r.name + ' 有 ' + jx0.length + ' 条相克：' + jx0.slice(0, 6).map(function (j) { return j.a === r.name ? j.b : j.a; }).join('、') + '，同局时必须按相克规则处理。')
+        : (r.name + ' 没有相克规则，可以和任意角色同局。');
+    } else {
+      a.answer = r.name + ' 是' + teamCn + '（' + side + '）：' + brief + '。' + when + '。';
+    }
 
     a.steps.push({ t: '① 能力原文', d: r.ability || '—' });
     a.steps.push({ t: '② 阵营与定位', d: teamCn + '・' + side + '。' + (r.team === 'demon' ? '本局核心目标：活到最后，让善良方无法处决你。' : r.team === 'minion' ? '任务：保护恶魔、混淆信息、必要时替恶魔挡刀。' : r.team === 'outsider' ? '外来者：能力有代价或会干扰善良方判断。' : '镇民：靠能力获取信息，帮善良方定位邪恶。') });
@@ -432,12 +462,15 @@
     if (!ws && !wx && !wh && WIKISTATE !== 2) {
       a.tips.push('📖 该角色还有百科全文（运作方式/范例/伪装建议），加载百科后可给出更详细的说书人指引。');
     }
-    /* 按问题关键词定向检索百科 */
-    var kw = q.replace(r.name, '').replace(/[的了吗呢？?，,。]/g, ' ').trim();
+    /* 按问题关键词定向检索百科，并把最关键的一句写进答案 */
+    var kw = q.replace(new RegExp(r.name, 'g'), '').replace(/[的了吗呢？?，,。怎么如何什么]/g, ' ').trim();
     if (kw.length >= 2 && r.wiki) {
-      wikiHits(r, kw, 2).forEach(function (h) {
+      var hs = wikiHits(r, kw, 2);
+      hs.forEach(function (h) {
         a.steps.push({ t: '🔎 百科命中 · ' + h.title, d: cut(h.text, 300) });
+        a.cites.push(cite('钟楼百科 · ' + r.name + ' · ' + h.title, h.html || h.text));
       });
+      if (hs.length) a.answer += '　关于「' + kw + '」：' + cut(hs[0].text, 100);
     }
 
     if (window.BOTCAbility && BOTCAbility.has(r.id)) {
@@ -458,13 +491,13 @@
     var a = A('相克判定 · ' + r1.name + ' × ' + r2.name, 'jinx');
     var j = jinxOf(r1.name, r2.name);
     if (j) {
-      a.verdict = '⚠ 存在相克：这两个角色同局时必须按相克规则处理，不能按常规执行。';
+      a.answer = '⚠ 不能按常规同局：' + r1.name + ' 与 ' + r2.name + ' 存在官方相克，必须按相克规则处理' + (j.reason ? '（' + cut(j.reason, 60) + '）' : '') + '。';
       a.steps.push({ t: '① 相克原文', d: j.reason || '—' });
       a.steps.push({ t: '② 处理方式', d: '把相克卡放在魔典中间，开局告知全场"本局存在相克"，并在设置阶段/首夜按卡面文字调整。' });
       a.cites.push(cite('官方相克规则 · ' + j.a + ' × ' + j.b, j.reason));
       a.tips.push('相克是官方为平衡设计的强制规则，说书人不能自行忽略。');
     } else {
-      a.verdict = '✅ 无相克：' + r1.name + ' 与 ' + r2.name + ' 之间没有官方相克记录，可正常同局。';
+      a.answer = '✅ 可以同局：' + r1.name + ' 与 ' + r2.name + ' 之间没有官方相克记录，按常规执行即可。';
       a.steps.push({ t: '核对范围', d: '已比对全部 ' + D.jinxes.length + ' 条官方相克规则，未命中。' });
       a.steps.push({ t: '仍需注意', d: '无相克≠无互动：还要看两者能力是否互相干扰（如中毒/保护/信息重叠）。' });
       var j1 = jinxListOf(r1.name).length, j2 = jinxListOf(r2.name).length;
@@ -570,7 +603,8 @@
   function answerTeamOf(r, q) {
     var a = A('阵营判定 · ' + r.name, 'team');
     var evil = (r.team === 'demon' || r.team === 'minion');
-    a.verdict = r.name + ' 是' + (evil ? '邪恶方' : '善良方') + '的' + (r.teamCn || TEAMCN[r.team]) + '。';
+    a.answer = r.name + ' 是' + (evil ? '邪恶方' : '善良方') + '的' + (r.teamCn || TEAMCN[r.team]) +
+      '，' + (evil ? '与恶魔同阵营，目标是让恶魔活到最后' : '目标是找出并处决所有恶魔') + '。';
     a.steps.push({ t: '① 阵营', d: (r.teamCn || TEAMCN[r.team]) + ' → ' + (evil ? '与恶魔同阵营，胜利条件是恶魔活到最后 / 存活只剩 2 人' : '胜利条件是处决所有恶魔') + '。' });
     a.steps.push({ t: '② 能力', d: r.ability || '—' });
     if (r.team === 'outsider') a.steps.push({ t: '③ 注意', d: '外来者是善良方，但能力往往有副作用或会制造错误信息，容易被误当成邪恶。' });
@@ -585,8 +619,9 @@
   function answerRule(q) {
     var a = A('规则检索', 'rule');
     var rs = ruleSearch(q, 3);
-    if (!rs.length) { a.verdict = '规则条目里没匹配到，下面给出百科/角色里的相关命中。'; a.similars = fullSearch(q, 8); return a; }
+    if (!rs.length) { a.answer = '规则条目里没匹配到这个词，下面是百科/角色里最接近的内容。'; a.similars = fullSearch(q, 8); return a; }
     var r0 = rs[0];
+    a.answer = '按官方规则：' + cut(r0.text, 110) + '（出自《' + (r0.catName || '') + '》· ' + r0.title + '）';
     a.verdict = '最相关规则：' + r0.title + '（' + (r0.catName || '') + '）';
     a.steps.push({ t: '① 规则原文', d: r0.text || '—' });
     rs.slice(1).forEach(function (r, i) {
@@ -613,13 +648,21 @@
     if (!eds.length) return null;
     if (eds.length > 1) eds.sort(function (x, y) { return (y.name || '').length - (x.name || '').length; });
     var e = eds[0], c = e.counts || {};
-    a.verdict = '《' + e.name + '》' + (e.level ? '（' + e.level + ' 级）' : '') + '：' + (e.playerNum || '') + '，镇民' + (c.townsfolk || 0) + '・外来者' + (c.outsider || 0) + '・爪牙' + (c.minion || 0) + '・恶魔' + (c.demon || 0) + '・旅行者' + (c.traveler || 0) + '。';
+    a.answer = '《' + e.name + '》适合 ' + (e.playerNum || '—') + '，' + (e.level === 1 ? '是新手首选剧本' : e.level ? '属于进阶级剧本（建议玩过几局再开）' : '') +
+      '：镇民' + (c.townsfolk || 0) + '・外来者' + (c.outsider || 0) + '・爪牙' + (c.minion || 0) + '・恶魔' + (c.demon || 0) + '。玩法要点：' + cut(e.description, 70);
     a.steps.push({ t: '① 剧本简介', d: cut(e.description, 320) || '—' });
     var rs = D.roles.filter(function (r) { return r.edition === e.id; });
+    var roleNames = {};
     ['townsfolk', 'outsider', 'minion', 'demon'].forEach(function (t) {
       var list = rs.filter(function (r) { return r.team === t; }).map(function (r) { return r.name; });
+      roleNames[t] = list;
       if (list.length) a.steps.push({ t: TEAMCN[t], d: list.join('、') });
     });
+    if (/有哪些角色|角色有哪些|角色列表|有什么角色|角色一览/.test(q)) {
+      a.answer = '《' + e.name + '》共 ' + rs.length + ' 名玩家角色 —— 镇民：' + (roleNames.townsfolk || []).join('、') +
+        '；外来者：' + (roleNames.outsider || []).join('、') + '；爪牙：' + (roleNames.minion || []).join('、') +
+        '；恶魔：' + (roleNames.demon || []).join('、') + '。';
+    }
     if (e.wiki) a.steps.push({ t: '百科补充', d: cut(e.wiki.html, 400) });
     a.links.push({ href: '#/edition/' + e.id, label: '《' + e.name + '》全部角色' });
     a.follow.push('《' + e.name + '》适合几个人玩？', '《' + e.name + '》有什么相克？');
@@ -631,12 +674,14 @@
     var a = A('检索结果', 'search');
     var hits = fullSearch(q, 10);
     if (!hits.length) {
-      a.verdict = '没有直接命中。换个说法试试，或直接问角色名 / 规则关键词。';
-      a.tips.push('支持的问法：角色能力、相克、夜晚顺序、人数配比、规则词条、局面推演。');
+      a.answer = '没查到「' + q + '」的直接答案。建议换个说法，或直接问角色名 / 规则关键词。';
+      a.tips.push('支持的问法：角色能力、相克、夜晚顺序、人数配比、规则词条、局面推演（如"9人局，1号自称共情者，2号也自称共情者，该怀疑谁？"）。');
       a.follow.push('9人局怎么配比？', '首夜流程怎么走？', '处决门槛怎么算？', '新手玩哪个剧本？');
       return a;
     }
-    a.verdict = '没有匹配到明确意图，以下是全库（角色能力 + 百科全文 + 规则 + 相克）里最相关的 ' + hits.length + ' 条命中：';
+    a.answer = '没有匹配到明确意图，最接近的答案是「' + hits[0].name + '」' +
+      (hits[0].t === 'role' ? '（角色）' : hits[0].t === 'rule' ? '（规则条目）' : '（相克规则）') +
+      '：' + cut(hits[0].hit || hits[0].sub || '', 80);
     hits.forEach(function (h) {
       a.steps.push({ t: (h.t === 'role' ? '角色' : h.t === 'rule' ? '规则' : '相克') + ' · ' + h.name, d: h.sub ? h.sub + '：' + (h.hit || '') : (h.hit || '') });
       a.links.push({ href: h.t === 'role' ? '#/role/' + h.id : h.t === 'rule' ? '#/rule/' + h.id : '#/jinxes', label: h.name });
@@ -646,7 +691,20 @@
   }
 
   /* ================= 主分析入口 ================= */
-  function analyze(q) {
+  /* 统一收口：保证每条回答都有「✅ 直接答案」 */
+  function fin(a) {
+    if (!a) return a;
+    if (!a.answer) {
+      a.answer = a.verdict || (a.steps && a.steps.length ? a.steps[0].d : '');
+      a.verdict = '';
+    }
+    if (a.verdict && a.verdict === a.answer) a.verdict = '';
+    if (!a.answer) a.answer = '见下方分析过程。';
+    return a;
+  }
+  function analyze(q) { return fin(analyzeRaw(q)); }
+
+  function analyzeRaw(q) {
     q = (q || '').trim();
     if (!q) return null;
     var e = ents(q), hits = e.roles, i;
@@ -672,6 +730,17 @@
       jl.forEach(function (j) { aj.steps.push({ t: '× ' + (j.a === r0.name ? j.b : j.a), d: j.reason || '' }); aj.cites.push(cite('官方相克规则', (j.a === r0.name ? j.b : j.a) + '：' + j.reason)); });
       aj.links.push({ href: '#/jinxes', label: '全部相克规则' }, roleLink(r0));
       return aj;
+    }
+
+    /* 3) 局面分析（含"N号…"的实战局面描述 → 直接给结论） */
+    var seatMentions = q.match(/(\d+)\s*号/g);
+    var imRole = /我是|我玩|我扮演|我的角色是|我拿到的是/.test(q);
+    var askDeduce = /怀疑|谁|分析|推理|怎么判断|该.*(提名|办|做|怎么)|怎么看|盘一盘|梳理/.test(q);
+    if ((seatMentions && (seatMentions.length >= 2 ||
+      (seatMentions.length === 1 && /自称|声称|说自己是|死了|出局|被处决|得知|得到|怀疑|谁|分析/i.test(q))))
+      || (imRole && askDeduce)) {
+      var as = answerSituation(q);
+      if (as) return as;
     }
 
     /* 4) 夜晚顺序 */
@@ -705,10 +774,10 @@
         a1.sandbox = hits[0].r.id;
         var rn = hits[0].r.name;
         if (/都是善良|都是好人|全善良|都为善良/.test(q)) {
-          a1.verdict = '结论：两侧存活玩家都是善良 → ' + rn + ' 应被告知「0」。规则是"得知邻座中邪恶玩家的数量"，不是善良数量，所以全善良时给 0 而不是 2。';
+          a1.answer = '应该给「0」。两侧存活玩家都是善良 → 邪恶数量 = 0，' + rn + ' 得知的是邻座中邪恶玩家的数量（不是善良数量），所以全善良时告知 0 而不是 2。';
           a1.steps.unshift({ t: '🎯 结论提示', d: '若两侧存活玩家都是善良 → 邪恶数量 = 0，告知「0」。' });
         } else if (/都是邪恶|全邪恶|都为邪恶/.test(q)) {
-          a1.verdict = '结论：两侧存活玩家都是邪恶 → ' + rn + ' 应被告知「2」。';
+          a1.answer = '应该给「2」。两侧存活玩家都是邪恶 → 邪恶数量 = 2。';
           a1.steps.unshift({ t: '🎯 结论提示', d: '若两侧都是邪恶 → 邪恶数量 = 2。' });
         }
         if (/两边|相邻|旁边|之间/.test(q)) a1.steps.unshift({ t: '🎯 你的问题', d: '你在问「两侧邻座」类信息，下方情境分析器已按座次环计算（取左右最近的两名存活玩家）。' });
@@ -754,6 +823,7 @@
     var lines = [];
     (a.cites || []).slice(0, 6).forEach(function (c) { lines.push('[官方资料·' + c.src + '] ' + c.text); });
     (a.steps || []).slice(0, 6).forEach(function (s) { lines.push('[分析·' + s.t + '] ' + cut(s.d, 200)); });
+    if (a.answer) lines.push('[本地引擎答案] ' + a.answer);
     if (a.verdict) lines.push('[本地引擎结论] ' + a.verdict);
     if (!lines.length) {
       fullSearch(q, 5).forEach(function (h) { lines.push('[检索·' + h.name + '] ' + (h.hit || h.sub || '')); });
@@ -856,6 +926,132 @@
     return { rows: rows, evilTotal: evilTotal, confirmedEvil: confirmedEvil, left: left, c: c };
   }
 
+  /* ================= 自然语言局面解析 → 明确答案 ================= */
+  var NAMES_LONGFIRST = null;
+  function roleNameIn(seg) {
+    if (!NAMES_LONGFIRST) {
+      NAMES_LONGFIRST = ALL.map(function (r) { return r.name; })
+        .concat(Object.keys(ALIAS))
+        .filter(function (n) { return n.length >= 2; })
+        .sort(function (a, b) { return b.length - a.length; });
+    }
+    var best = null, bestPos = 999;
+    for (var i = 0; i < NAMES_LONGFIRST.length; i++) {
+      var n = NAMES_LONGFIRST[i], p = seg.indexOf(n);
+      if (p >= 0 && p < bestPos) { bestPos = p; best = n; }
+    }
+    if (!best) return null;
+    var r = byName[best] || byName[ALIAS[best]];
+    return r ? { r: r, pos: bestPos, name: best } : null;
+  }
+  function parseSituation(q) {
+    var st = { n: 0, me: '', claims: {}, known: {}, dead: {}, infos: [], seats: [] };
+    var mn = /(\d+)\s*[人位]/.exec(q);
+    if (mn && +mn[1] >= 5 && +mn[1] <= 20) st.n = +mn[1];
+    /* 我的角色 */
+    var meM = /(?:我是|我玩|我扮演|我的角色是|作为|我拿到的是)\s*([^\s，。？?、]{2,8})/.exec(q);
+    if (meM) { var mr = roleNameIn(meM[1]); if (mr) st.me = mr.r.id; }
+    /* 座位提及 */
+    var re = /(\d+)\s*号/g, m, pos = [];
+    while ((m = re.exec(q))) pos.push({ n: +m[1], i: m.index });
+    pos.forEach(function (p, k) {
+      var end = (k + 1 < pos.length) ? pos[k + 1].i : q.length;
+      var seg = q.slice(p.i, Math.min(end, p.i + 26));
+      st.seats.push(p.n);
+      if (/死|出局|被处决|被杀|死了|阵亡/.test(seg)) st.dead[p.n] = true;
+      var f = roleNameIn(seg);
+      if (f && f.pos <= 12) {
+        var evilRole = (f.r.team === 'demon' || f.r.team === 'minion');
+        if (/其实是|确实是|确认|真的是|翻开|已确认|真实是|就是/.test(seg)) st.known[p.n] = f.r.id;
+        else if (evilRole && !/自称|声称|说自己是|喊|假装/.test(seg)) st.known[p.n] = f.r.id;  /* 没人会公开自称爪牙/恶魔 → 视为已确认 */
+        else st.claims[p.n] = f.r.id;
+      }
+    });
+    /* 信息数字：整句扫描（"首夜得知1""第二夜得知0"） */
+    var reInfo = /(?:得知|得到|给的是|结果是|查到|告诉|显示|结果是)\s*(?:了)?\s*([0-9])/g, mi;
+    while ((mi = reInfo.exec(q))) st.infos.push({ seat: null, v: +mi[1] });
+    return st;
+  }
+  function answerSituation(q) {
+    var st = parseSituation(q);
+    /* 覆盖式写入推理器（自然语言描述的是新局面，先清空旧状态） */
+    dedReset(st.n || DD.n);
+    Object.keys(st.claims).forEach(function (k) { DD.claims[k] = st.claims[k]; });
+    Object.keys(st.known).forEach(function (k) { DD.known[k] = st.known[k]; });
+    Object.keys(st.dead).forEach(function (k) { DD.dead[k] = st.dead[k]; });
+
+    var a = A('局面分析', 'situation');
+    var res = dedAnalyze();
+    var rows = res.rows.slice().sort(function (x, y) { return y.susp - x.susp; });
+    var knownEvils = rows.filter(function (r) { return r.known && (byId[r.known].team === 'demon' || byId[r.known].team === 'minion'); });
+    var conflicts = rows.filter(function (r) { return r.susp >= 3 && knownEvils.indexOf(r) < 0; });
+    var aliveN = res.rows.filter(function (r) { return !r.dead; }).length;
+    var caveats = '注意中毒/醉酒、间谍、疯子、提线木偶都会让"声称 ≠ 真相"，别只凭逻辑定死罪。';
+
+    /* ✅ 直接给结论 */
+    if (conflicts.length) {
+      var t1 = conflicts[0];
+      a.answer = '该怀疑的是 ' + t1.n + ' 号' + (conflicts[1] ? ' 和 ' + conflicts[1].n + ' 号' : '') + '：' + (t1.why[0] || '信息矛盾集中在他身上') + '。' +
+        '建议今天优先向 ' + t1.n + ' 号施压或提名，逼他解释自己的声称' +
+        (knownEvils.length ? '；已确认的邪恶是 ' + knownEvils.map(function (r) { return r.n + '号(' + byId[r.known].name + ')'; }).join('、') +
+          '，邪恶名额还剩 ' + Math.max(0, res.left) + ' 个' : '') + '。' + caveats;
+    } else if (knownEvils.length) {
+      a.answer = '已确认的邪恶是 ' + knownEvils.map(function (r) { return r.n + '号 ' + byId[r.known].name; }).join('、') +
+        '（名额 ' + res.confirmedEvil + '/' + res.evilTotal + '，还剩 ' + Math.max(0, res.left) + ' 个）。' +
+        '目前没有形成声称冲突，' + (Math.max(0, res.left) > 0
+          ? '下一步应逼出更多声称：让还没报角色的人依次公开身份，重点比对重复声称与外来者数量。'
+          : '邪恶名额已全部确认，其余存活玩家可视为善良，直接收官。') + caveats;
+    } else {
+      var deadList = Object.keys(st.dead).map(function (k) { return k + '号'; });
+      var frame = '现在还定位不了坏人：' + (DD.n ? DD.n + ' 人局邪恶共 ' + res.evilTotal + ' 人（爪牙' + (res.c.minion || 0) + '+恶魔' + (res.c.demon || 0) + '）' : '还没给出人数') +
+        (deadList.length ? '，' + deadList.join('、') + '已出局' : '') + '。';
+      if (st.me) {
+        var mr = byId[st.me];
+        var extra = st.infos.length
+          ? '你提供的信息：' + st.infos.map(function (x) { return '得知 ' + x.v; }).join('、') +
+            (mr.id === 'empath' ? '（共情者：这个数字 = 你两侧存活邻座里的邪恶数量；邻座会随死亡变化，两次信息的对象不同，不能直接相加，要分别对照当时的邻座）' : '')
+          : '（你还没告诉我你得知的数字）';
+        frame = '你是' + mr.name + '：' + abilityBrief(mr) + '。' + extra + '。' + frame;
+      }
+      a.answer = frame + '下一步：① 让每个人依次公开声称的角色（找重复声称 = 找说谎者）；② 记录已出局者翻开的身份；' +
+        (st.infos.length ? '③ 把你每一夜的两侧邻座告诉我，我就能用你上面的数字直接锁人。'
+          : '③ 把你掌握的信息数字告诉我（如"我共情者首夜得知 1"）。');
+    }
+
+    /* 分析过程 */
+    var sit = [];
+    if (st.n) sit.push('人数 ' + st.n + ' 人');
+    if (st.me) sit.push('你的角色：' + byId[st.me].name);
+    var cl = Object.keys(st.claims).map(function (k) { return k + '号自称' + byId[st.claims[k]].name; });
+    if (cl.length) sit.push('声称：' + cl.join('、'));
+    var kn = Object.keys(st.known).map(function (k) { return k + '号实为' + byId[st.known[k]].name; });
+    if (kn.length) sit.push('已确认身份：' + kn.join('、'));
+    var dd = Object.keys(st.dead).map(function (k) { return k + '号'; });
+    if (dd.length) sit.push('已出局：' + dd.join('、'));
+    if (st.infos.length) sit.push('信息数字：' + st.infos.map(function (x) { return x.seat + '号→' + x.v; }).join('、'));
+    a.steps.push({ t: '① 我识别到的局面', d: sit.length ? sit.join('；') : '（没能解析出具体座位信息，请在下方推理器里手动填）' });
+    a.steps.push({ t: '② 邪恶名额', d: '本局邪恶共 ' + res.evilTotal + ' 人（爪牙' + (res.c.minion || 0) + ' + 恶魔' + (res.c.demon || 0) + '），已确认 ' + res.confirmedEvil + ' 人，还差 ' + Math.max(0, res.left) + ' 人。' });
+    a.steps.push({ t: '③ 矛盾检测', d: conflicts.length ? conflicts.map(function (r) { return r.n + '号：' + r.why.join('；'); }).join('　｜　') : '未发现声称冲突。' });
+    if (conflicts.length || knownEvils.length) {
+      a.steps.push({ t: '④ 嫌疑排序', d: rows.filter(function (r) { return r.susp > 0; }).slice(0, 5).map(function (r, i) { return (i + 1) + '. ' + r.n + '号（' + r.susp.toFixed(1) + '）' + (r.why.length ? '：' + r.why[0] : ''); }).join('　') });
+      var focus = conflicts.length ? conflicts[0] : knownEvils[0];
+      a.steps.push({ t: '⑤ 建议行动', d: '今天把火力放在 ' + focus.n + ' 号：先要求他解释声称，再对照已确认身份；存活 ' + aliveN + ' 人，处决需要 ' + execThreshold(aliveN) + ' 票。' });
+    } else {
+      a.steps.push({ t: '④ 还缺什么', d: '至少再要 2 条声称，或 1 个已确认身份 + 1 条信息数字，才能定位矛盾。' });
+    }
+    if (st.me) {
+      a.steps.push({ t: '⑥ 你的角色', d: byId[st.me].name + '：' + abilityBrief(byId[st.me]) + (st.infos.length ? '　你提供的数字：' + st.infos.map(function (x) { return x.v; }).join('、') : '') });
+    }
+    if (st.infos.length) {
+      a.tips.push('你提供的信息数字（' + st.infos.map(function (x) { return '得知 ' + x.v; }).join('、') +
+        '）：若你未中毒/醉酒，这就是确定线索——把它和当时的座次环对照，能直接圈出嫌疑范围。');
+    }
+    a.warns.push('以上是基于你提供的信息做的逻辑推演，不是官方规则；中毒/醉酒、间谍、疯子、提线木偶都会让"声称"与"真相"不一致。');
+    a.tips.push('已把解析结果填入下方「🧩 局面推理器」，可以直接改座位继续推演。');
+    a.follow.push('恶魔死了游戏就结束吗？', '7人存活需要几票？', '处决门槛怎么算？');
+    return a;
+  }
+
   /* ================= 当前对局上下文 ================= */
   function gameCtx() {
     var G = window.BOTCGame && BOTCGame.get ? BOTCGame.get() : null;
@@ -871,18 +1067,22 @@
   function answerGame() {
     var gc = gameCtx();
     var a = A('当前对局 · 说书人下一步', 'game');
-    if (!gc) { a.verdict = '当前没有进行中的对局。先去「🕯️ 开局」创建一局，再回来问"我现在该做什么"。'; a.links.push({ href: '#/game/new', label: '去开一局' }); return a; }
+    if (!gc) { a.answer = '当前没有进行中的对局，先去「🕯️ 开局」创建一局，再回来问"我现在该做什么"。'; a.links.push({ href: '#/game/new', label: '去开一局' }); return a; }
     var G = gc.G;
     a.verdict = '当前：' + (window.BOTCGame.edName ? BOTCGame.edName(G.edition) : G.edition) + ' · ' +
       (G.day === 0 ? '设置/首夜' : '第 ' + G.day + ' 天') + ' · 阶段「' + (G.phase === 'night' ? '夜晚' : G.phase === 'day' ? '白天' : '设置') + '」 · 存活 ' + gc.alive + '/' + G.seats.length + ' 人。';
     if (G.phase === 'night' || G.day === 0) {
       if (gc.next) {
+        a.answer = '下一步：唤醒 ' + gc.next.x.name + (gc.next.seat ? '（' + gc.next.seat.n + '号 ' + gc.next.seat.name + '）' : '') +
+          ' —— ' + ((window.BOTCAbility && BOTCAbility.has(gc.next.x.id) && BOTCAbility.get(gc.next.x.id).hint) || abilityBrief(byId[gc.next.x.id] || {})) +
+          ' 完成后再叫下一位。';
         a.steps.push({ t: '① 当前该唤醒', d: gc.next.x.name + '（本夜第 ' + (gc.next.i + 1) + ' 步）' + (gc.next.seat ? ' → ' + gc.next.seat.n + '号 ' + gc.next.seat.name : '') + '。' });
         var ab = window.BOTCAbility && BOTCAbility.has(gc.next.x.id) ? BOTCAbility.get(gc.next.x.id) : null;
         if (ab) a.steps.push({ t: '② 能力提示', d: ab.hint || (byId[gc.next.x.id] ? byId[gc.next.x.id].ability : '') });
-      } else a.steps.push({ t: '① 当前该做', d: '本夜顺序已走完，可以进入天亮/白天。' });
+      } else { a.answer = '本夜顺序已走完，可以宣布天亮、进入白天（存活 ' + gc.alive + ' 人，今天处决需要 ' + execThreshold(gc.alive) + ' 票）。'; a.steps.push({ t: '① 当前该做', d: '本夜顺序已走完，可以进入天亮/白天。' }); }
       a.steps.push({ t: '③ 处决门槛预告', d: '若白天存活 ' + gc.alive + ' 人，需要 ' + execThreshold(gc.alive) + ' 票才能处决。' });
     } else {
+      a.answer = '现在是白天：先讨论，再走提名 → 顺时针举手投票，存活 ' + gc.alive + ' 人，处决需要 ' + execThreshold(gc.alive) + ' 票；没人提名或票数不够就直接进夜晚。';
       a.steps.push({ t: '① 白天流程', d: '讨论 → 提名（每人每天限提名/被提名各 1 次）→ 顺时针举手 → 票数 ≥ ' + execThreshold(gc.alive) + ' 票则处决。' });
       var noNominated = G.seats.filter(function (s) { return s.alive && !s.nominated; }).length;
       a.steps.push({ t: '② 提名情况', d: '还有 ' + noNominated + ' 名存活玩家今天没提名过。' });
@@ -991,6 +1191,7 @@
   function ansHtml(a) {
     var h = '<div id="ansbox" class="card" style="margin-top:12px;padding:12px 14px">';
     h += '<div class="ftl">' + esc(a.title) + '</div>';
+    if (a.answer) h += '<div class="abox ans"><b>✅ 直接答案</b><div class="anstext">' + esc(a.answer) + '</div></div>';
     if (a.verdictHtml) h += '<div class="abox"><b>结论</b><div>' + a.verdictHtml + '</div></div>';
     else if (a.verdict) h += '<div class="abox"><b>结论</b><div>' + esc(a.verdict) + '</div></div>';
     if (a.why) h += a.why;
