@@ -777,6 +777,7 @@
   });
 
   /* ---------------- 启动 ---------------- */
+  window.BOTCWiki = Wiki;      /* 供问答模块复用同一份百科加载器 */
   window.addEventListener('hashchange', route);
   if (!location.hash) location.hash = '#/home';
   route();
