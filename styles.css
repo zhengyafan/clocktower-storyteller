@@ -469,3 +469,14 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
   padding:11px 13px;box-shadow:0 2px 10px rgba(139,30,45,.07)}
 .abox.ans b{color:var(--accent);font-size:12px}
 .abox.ans .anstext{font-size:15.5px;line-height:1.75;font-weight:600;color:var(--text);white-space:pre-wrap}
+
+/* 问答：涉及角色卡片 */
+.rcard{display:block;text-decoration:none;border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:8px 11px;margin:7px 0;background:#fff}
+.rcard:active{transform:scale(.995)}
+.rcard .rcnm{font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rcard .rcnm .tag{font-weight:600}
+.rcard .rcnote{font-size:10.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);
+  border:1px solid #e8c3c8;border-radius:6px;padding:1px 6px}
+.rcard .rcab{font-size:12.5px;line-height:1.65;color:var(--text-dim);margin-top:4px}
+.rcard .rcmeta{font-size:11px;color:var(--text-faint);margin-top:4px}

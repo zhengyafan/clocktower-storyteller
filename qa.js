@@ -186,8 +186,20 @@
       verdictHtml: '', why: '',
       steps: [],      /* [{t, d}] 分析过程 */
       cites: [],      /* [{src, text}] 官方依据 */
-      tips: [], warns: [], links: [], follow: [], sandbox: null, calc: null
+      tips: [], warns: [], links: [], follow: [], sandbox: null, calc: null,
+      roles: []      /* [{id, note}] 本题涉及到的角色 */
     };
+  }
+  /* 收集"本题涉及的角色"（同角色被多次提及时合并备注） */
+  function addRole(a, id, note) {
+    if (!id || !byId[id]) return;
+    for (var i = 0; i < a.roles.length; i++) {
+      if (a.roles[i].id === id) {
+        if (note && a.roles[i].note.indexOf(note) < 0) a.roles[i].note += '、' + note;
+        return;
+      }
+    }
+    a.roles.push({ id: id, note: note || '' });
   }
   function roleLink(r) { return { href: '#/role/' + r.id, label: r.name }; }
   function cite(src, text) { return { src: src, text: cut(text, 320) }; }
@@ -447,6 +459,7 @@
 
     a.cites.push(cite('官方魔典 · ' + r.name, r.ability));
     if (r.flavor) a.why += '<div class="flavor" style="padding:6px 0">' + esc(r.flavor) + '</div>';
+    addRole(a, r.id, '你问的角色');
 
     /* 百科：运作方式 / 范例 / 说书人建议 */
     var ws = wikiSection(r, /运作方式|如何运作|机制|运作/);
@@ -489,6 +502,7 @@
 
   function answerJinx(r1, r2) {
     var a = A('相克判定 · ' + r1.name + ' × ' + r2.name, 'jinx');
+    addRole(a, r1.id, '你问的角色'); addRole(a, r2.id, '你问的角色');
     var j = jinxOf(r1.name, r2.name);
     if (j) {
       a.answer = '⚠ 不能按常规同局：' + r1.name + ' 与 ' + r2.name + ' 存在官方相克，必须按相克规则处理' + (j.reason ? '（' + cut(j.reason, 60) + '）' : '') + '。';
@@ -510,6 +524,7 @@
 
   function answerNightOrder(hits, q) {
     var a = A('夜晚顺序', 'night');
+    hits.forEach(function (h) { addRole(a, h.r.id, '你问的角色'); });
     if (hits.length >= 2) {
       var r1 = hits[0].r, r2 = hits[1].r, p1 = nightPos(r1), p2 = nightPos(r2);
       if (!p1.f && !p1.o) { a.verdict = r1.name + ' 夜晚不行动。'; }
@@ -581,6 +596,7 @@
 
   function answerCompare(r1, r2, q) {
     var a = A('角色对比 · ' + r1.name + ' vs ' + r2.name, 'compare');
+    addRole(a, r1.id, '对比对象'); addRole(a, r2.id, '对比对象');
     var p1 = nightPos(r1), p2 = nightPos(r2);
     a.verdict = r1.name + '（' + (r1.teamCn || TEAMCN[r1.team]) + '）与 ' + r2.name + '（' + (r2.teamCn || TEAMCN[r2.team]) + '）：' +
       (r1.team === r2.team ? '同阵营，' : '不同阵营，') +
@@ -602,6 +618,7 @@
 
   function answerTeamOf(r, q) {
     var a = A('阵营判定 · ' + r.name, 'team');
+    addRole(a, r.id, '你问的角色');
     var evil = (r.team === 'demon' || r.team === 'minion');
     a.answer = r.name + ' 是' + (evil ? '邪恶方' : '善良方') + '的' + (r.teamCn || TEAMCN[r.team]) +
       '，' + (evil ? '与恶魔同阵营，目标是让恶魔活到最后' : '目标是找出并处决所有恶魔') + '。';
@@ -692,7 +709,7 @@
 
   /* ================= 主分析入口 ================= */
   /* 统一收口：保证每条回答都有「✅ 直接答案」 */
-  function fin(a) {
+  function fin(a, q) {
     if (!a) return a;
     if (!a.answer) {
       a.answer = a.verdict || (a.steps && a.steps.length ? a.steps[0].d : '');
@@ -700,9 +717,13 @@
     }
     if (a.verdict && a.verdict === a.answer) a.verdict = '';
     if (!a.answer) a.answer = '见下方分析过程。';
+    /* 兜底：问题里提到的角色都列出来 */
+    if (q && (!a.roles || !a.roles.length)) {
+      findRoles(q).slice(0, 6).forEach(function (h) { addRole(a, h.r.id, '问题中提及'); });
+    }
     return a;
   }
-  function analyze(q) { return fin(analyzeRaw(q)); }
+  function analyze(q) { return fin(analyzeRaw(q), q); }
 
   function analyzeRaw(q) {
     q = (q || '').trim();
@@ -786,6 +807,7 @@
     }
     if (hits.length > 1) {
       var a3 = A('多角色解析', 'role');
+      hits.forEach(function (h) { addRole(a3, h.r.id, '问题中提及'); });
       a3.verdict = '识别到 ' + hits.length + ' 个角色：' + hits.map(function (h) { return h.r.name; }).join('、') + '。下面逐一给出能力与关键点。';
       hits.forEach(function (h) {
         var r = h.r, p = nightPos(r);
@@ -981,6 +1003,11 @@
     Object.keys(st.dead).forEach(function (k) { DD.dead[k] = st.dead[k]; });
 
     var a = A('局面分析', 'situation');
+    /* 涉及角色：按座位登记（"1号自称共情者"这类） */
+    if (st.me) addRole(a, st.me, '你的角色');
+    Object.keys(st.claims).forEach(function (k) { addRole(a, st.claims[k], k + '号自称'); });
+    Object.keys(st.known).forEach(function (k) { addRole(a, st.known[k], k + '号已确认'); });
+    if (!a.roles.length) findRoles(q).slice(0, 5).forEach(function (h) { addRole(a, h.r.id, '问题中提及'); });
     var res = dedAnalyze();
     var rows = res.rows.slice().sort(function (x, y) { return y.susp - x.susp; });
     var knownEvils = rows.filter(function (r) { return r.known && (byId[r.known].team === 'demon' || byId[r.known].team === 'minion'); });
@@ -1195,6 +1222,27 @@
     if (a.verdictHtml) h += '<div class="abox"><b>结论</b><div>' + a.verdictHtml + '</div></div>';
     else if (a.verdict) h += '<div class="abox"><b>结论</b><div>' + esc(a.verdict) + '</div></div>';
     if (a.why) h += a.why;
+
+    /* 本题涉及的角色 */
+    if (a.roles && a.roles.length) {
+      h += '<div class="ftl">🎭 本题涉及的角色</div>';
+      h += a.roles.slice(0, 8).map(function (x) {
+        var r = byId[x.id]; if (!r) return '';
+        var p = nightPos(r);
+        var evil = (r.team === 'demon' || r.team === 'minion');
+        var jx = jinxListOf(r.name).length;
+        return '<a class="rcard" href="#/role/' + r.id + '">' +
+          '<div class="rcnm">' + esc(r.name) +
+          '<span class="tag" style="' + (evil ? 'color:var(--evil);border-color:#eecfd3' : 'color:var(--good);border-color:#cfe3d0') + '">' +
+          esc(r.teamCn || TEAMCN[r.team]) + '</span>' +
+          (x.note ? '<span class="rcnote">' + esc(x.note) + '</span>' : '') + '</div>' +
+          '<div class="rcab">' + esc(r.ability || '') + '</div>' +
+          '<div class="rcmeta">' + esc(r.editionCn || '—') + ' ・ ' +
+          (p.f || p.o ? '首夜' + (p.f ? '第' + p.f + '位' : '不行动') + '／其他夜' + (p.o ? '第' + p.o + '位' : '不行动') : '夜晚不行动') +
+          (jx ? ' ・ ⚠相克 ' + jx + ' 条' : '') + ' ・ 查看详情 →</div>' +
+          '</a>';
+      }).join('');
+    }
 
     if (a.steps && a.steps.length) {
       h += '<div class="ftl">分析过程</div>';
