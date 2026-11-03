@@ -578,3 +578,104 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .rcfix{margin-top:5px;font-size:11.5px;line-height:1.65;color:var(--text-dim);
   background:var(--bg-soft);border-left:3px solid var(--accent);border-radius:6px;padding:5px 8px}
 .rcfix b{display:block;font-size:11px;color:var(--accent);margin-bottom:2px}
+
+/* ============================================================
+   一览表 · 海报版（仿官方速查表版式，打印 A4 纵向）
+   ============================================================ */
+.po-wrap{margin-top:10px}
+.poster{max-width:860px;margin:0 auto;font-family:var(--font-sans,'Noto Serif SC',serif)}
+/* ---------- 封面 ---------- */
+.po-cover{position:relative;background:#f5eedb;border:3px double #8a6a3a;border-radius:6px;
+  padding:34px 26px 26px;text-align:center;box-shadow:0 4px 18px rgba(74,52,20,.18);
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.po-cover::before{content:'';position:absolute;inset:6px;border:1px solid #c8b088;border-radius:3px;pointer-events:none}
+.po-orn{color:#a3834e;font-size:13px;letter-spacing:4px;margin:2px 0}
+.po-en{font-size:11px;letter-spacing:5px;color:#9a7a45;margin:6px 0 2px;font-weight:600}
+.po-title{font-size:34px;font-weight:800;color:#5a3a14;letter-spacing:6px;margin:6px 0 2px;
+  font-family:'Noto Serif SC','Songti SC',serif}
+.po-titem{font-size:26px;margin-right:8px}
+.po-sub{font-size:15px;font-weight:700;color:#8a5a1e;margin:8px 0 2px;letter-spacing:2px}
+.po-credit{font-size:12.5px;color:#7a6238;margin-top:4px}
+.po-quote{font-size:14px;color:#99552e;margin:8px 0 2px;font-weight:600}
+.po-comp{border-collapse:collapse;margin:16px auto 8px;font-size:14px;text-align:center}
+.po-comp th{font-weight:800;padding:3px 14px 3px 6px;text-align:right;color:#5a3a14}
+.po-comp td{padding:3px 12px;color:#4a3a20;min-width:34px}
+.po-comp th.c-good,.po-comp tr td:first-child{color:#1e5aa8}
+.po-comp th.c-evil{color:#a01818}
+.po-note{font-size:11px;color:#a08a5e;margin-top:8px}
+/* ---------- 内页 ---------- */
+.po-inner{background:#f7f1e0;border:2px solid #a3834e;border-radius:6px;margin-top:14px;
+  padding:16px 16px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.po-head{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid #a3834e;padding-bottom:8px;margin-bottom:12px}
+.po-head b{font-size:20px;color:#5a3a14;letter-spacing:3px;font-family:'Noto Serif SC','Songti SC',serif}
+.po-hem{font-size:18px}
+.po-hs{margin-left:auto;font-size:12.5px;color:#7a6238;font-weight:600}
+.po-grid{display:grid;grid-template-columns:56px 1fr 56px;gap:10px;align-items:start}
+.po-rail{display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:#efe5cc;border:1px solid #d8c49a;border-radius:8px;padding:8px 4px}
+.po-rail-t{font-size:11px;font-weight:800;color:#8a5a1e;letter-spacing:3px;writing-mode:vertical-rl;letter-spacing:6px}
+.po-rail-i{display:flex;flex-direction:column;align-items:center;gap:1px}
+.po-rail-i b{font-size:10px;color:#8a6a3a;font-weight:600}
+.po-rail-e{font-size:11px;color:#b09a6a}
+.po-mid{min-width:0}
+.po-sec{margin-bottom:12px}
+.po-sect{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:800;letter-spacing:1px;
+  border-bottom:1.5px solid currentColor;padding-bottom:4px;margin-bottom:8px}
+.po-sect i{width:5px;height:15px;border-radius:2px;background:currentColor;display:inline-block}
+.po-sect span{font-size:11px;font-weight:600;opacity:.65;margin-left:auto}
+.po-sec.good .po-sect{color:#1e5aa8}
+.po-sec.evil .po-sect{color:#a01818}
+.po-sec.trav .po-sect{color:#6a3fa0}
+.po-sec.fab .po-sect{color:#7a5c14}
+.po-list{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
+@media (max-width:640px){.po-list{grid-template-columns:1fr}}
+.po-item{display:flex;gap:8px;align-items:flex-start;background:rgba(255,255,255,.55);
+  border:1px solid #e0d2ac;border-radius:8px;padding:7px 9px;cursor:pointer}
+.po-item:active{transform:scale(.995)}
+.po-ic{position:relative;flex:0 0 auto;border-radius:50%;overflow:hidden;display:inline-flex;
+  align-items:center;justify-content:center;background:#d8c49a}
+.po-ic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+.po-ic .po-fb{font-size:14px;font-weight:800;color:#fff}
+.po-ic.good{background:#3a6db3}.po-ic.evil{background:#a32d2d}
+.po-ic.trav{background:#6a3fa0}.po-ic.fab{background:#a3834e}
+.po-tx{min-width:0;flex:1}
+.po-nmh{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.po-nm{font-size:14px;font-weight:800;letter-spacing:.5px}
+.po-sec.good .po-nm{color:#1e5aa8}.po-sec.evil .po-nm{color:#a01818}
+.po-nm.good{color:#1e5aa8}.po-nm.evil{color:#a01818}
+.po-nm.trav{color:#6a3fa0}.po-nm.fab{color:#7a5c14}
+.po-tm{font-size:10.5px;color:#8a6a3a;font-weight:600}
+.po-mk{font-style:normal;font-size:11px;color:#a01818;font-weight:700}
+.po-ab{font-size:12px;line-height:1.62;color:#4a3a20;margin-top:2px}
+.po-kw{color:#1e5aa8;font-weight:700}
+.po-sec.evil .po-kw,.po-fab .po-kw{color:#a01818}
+.po-fab{margin-top:4px}
+.po-fab .po-sect{color:#7a5c14}
+.po-fablist{grid-template-columns:1fr 1fr}
+@media (max-width:640px){.po-fablist{grid-template-columns:1fr}}
+.po-rules{background:#efe5cc;border:1px dashed #b09a6a;border-radius:8px;padding:9px 12px;margin-top:10px}
+.po-rules>b{font-size:12.5px;color:#5a3a14}
+.po-rules span{display:block;font-size:11.5px;line-height:1.6;color:#5a4a2a;margin-top:4px}
+.po-rules span i{font-style:normal;font-weight:800;color:#8a5a1e;margin-right:4px}
+.po-legend{font-size:10.5px;color:#a08a5e;margin-top:10px;line-height:1.7;text-align:center}
+.po-tabs{display:inline-flex;gap:5px;margin-left:auto}
+.po-tabs .chip{font-size:11.5px;padding:3px 10px}
+/* 手机上：左右夜序栏改为横排在顶部/底部 */
+@media (max-width:640px){
+  .po-grid{display:flex;flex-direction:column}
+  .po-rail{flex-direction:row;flex-wrap:wrap;justify-content:flex-start;padding:8px}
+  .po-rail-t{writing-mode:horizontal-tb;letter-spacing:2px;margin-right:6px}
+}
+/* ---------- 打印：A4 纵向，封面独占一页 ---------- */
+@media print{
+  @page{size:A4 portrait;margin:8mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff!important}
+  .noprint,#tabbar,#topbar{display:none!important}
+  .poster{max-width:100%;margin:0}
+  .po-cover{page-break-after:always;break-after:page;box-shadow:none}
+  .po-inner{box-shadow:none;border-width:1.5px;margin-top:0}
+  .po-sec,.po-fab,.po-rules{break-inside:avoid;page-break-inside:avoid}
+  .po-item{break-inside:avoid;page-break-inside:avoid}
+  .po-cover{min-height:255mm;display:flex;flex-direction:column;justify-content:center}
+}
