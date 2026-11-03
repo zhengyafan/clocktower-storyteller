@@ -663,7 +663,7 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .poster{display:flex;flex-direction:column;gap:16px;align-items:center}
 .po-page{position:relative;width:100%;max-width:794px;aspect-ratio:210/297;
   background:#f7f1e0;border:1px solid #c8b088;border-radius:2px;
-  box-shadow:0 4px 18px rgba(74,52,20,.18);padding:9mm;overflow:hidden;
+  box-shadow:0 4px 18px rgba(74,52,20,.18);padding:7mm;overflow:hidden;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 .po-page::after{content:'';position:absolute;inset:3mm;border:1px solid #d8c49a;pointer-events:none;border-radius:1px}
 .po-fit{position:relative}
@@ -679,7 +679,8 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-backtip{margin-top:12px;font-size:12px;color:#8a6a3a;text-align:center;line-height:1.8}
 .po-note{font-size:10.5px;color:#a08a5e;margin-top:12px;text-align:center}
 /* ---------- 夜晚行动顺序横条 ---------- */
-.po-ns{margin-top:7px;background:#efe5cc;border:1px solid #d8c49a;border-radius:8px;padding:5px 8px}
+.po-ns{margin-top:6px;background:#efe5cc;border:1px solid #d8c49a;border-radius:8px;padding:5px 8px}
+.po-back .po-ns{margin-top:8px}
 .po-ns-t{font-size:10px;font-weight:800;color:#8a5a1e;letter-spacing:2px;margin-bottom:3px}
 .po-ns-r{display:flex;align-items:flex-start;gap:6px;margin-top:2px}
 .po-ns-r>i{font-style:normal;font-size:9.5px;font-weight:800;color:#8a5a1e;flex:0 0 30px;line-height:18px}
@@ -703,7 +704,7 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
   .poster{display:block;gap:0;max-width:none;margin:0}
   .po-wrap{margin:0!important;padding:0!important;overflow:visible!important}
   .po-page{width:210mm;height:297mm;max-width:none;aspect-ratio:auto;
-    box-shadow:none;border:none;border-radius:0;padding:9mm;
+    box-shadow:none;border:none;border-radius:0;padding:7mm;
     page-break-after:always;break-after:page;overflow:hidden}
   .po-page:last-child{page-break-after:auto;break-after:auto}
   .po-sec,.po-fab,.po-item,.po-bk{break-inside:avoid;page-break-inside:avoid}
@@ -716,18 +717,24 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 /* ============================================================
    1 张 A4 双面（正面=全部角色 / 背面=封面+完整规则）
    ============================================================ */
-.po-all{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 6px;align-content:start}
+/* 正面：3 栏流式排版，能力完整文本，空间利用率最高 */
+.po-flow{columns:3;column-gap:12px;column-fill:balance}
+.po-flow .po-band{column-span:all;break-inside:avoid}
+.po-flow .po-item{break-inside:avoid;page-break-inside:avoid;margin-bottom:1px;
+  padding:2px 4px;gap:3px;border-radius:4px;display:flex;align-items:flex-start}
+.po-flow .po-nm{font-size:10.5px}
+.po-flow .po-ab{font-size:10px;line-height:1.3;margin-top:0}
 .po-band{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;
   letter-spacing:.5px;border-bottom:1.5px solid currentColor;padding-bottom:1px;margin-top:2px}
 .po-band i{width:4px;height:11px;border-radius:1px;background:currentColor;display:inline-block}
 .po-band span{margin-left:auto;font-size:9.5px;font-weight:600;opacity:.7}
 .po-band.good{color:#1e5aa8}.po-band.evil{color:#a01818}
 .po-band.travfab{color:#6a3fa0}.po-band.fab{color:#7a5c14}
-.po-all .po-item{padding:2px 5px;gap:5px;border-radius:6px}
-.po-all .po-nm{font-size:11.5px}
-.po-all .po-mk{font-size:9.5px}
-.po-all .po-ab{font-size:10.5px;line-height:1.34;margin-top:0}
-.po-all .evil .po-kw{color:#a01818}
+
+.po-flow .po-nm{font-size:11.5px}
+.po-flow .po-mk{font-size:9.5px}
+.po-flow .po-ab{font-size:10px;line-height:1.3;margin-top:0}
+.po-flow .evil .po-kw{color:#a01818}
 /* 背面压缩封面 */
 .po-cover.po-c2{padding:9px 16px 7px;margin-bottom:7px;box-shadow:none;border-width:2px}
 .po-c2::before{inset:4px}

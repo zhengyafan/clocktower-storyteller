@@ -58,19 +58,6 @@
     return t;
   }
 
-  /* 海报速查摘要：A4 一页放得下，完整能力留在工具内 */
-  function brief(t) {
-    t = String(t || '').replace(/\s+/g, ' ').trim();
-    var LIM = 20;
-    if (t.length <= LIM) return t;
-    var out = t.slice(0, LIM), cut = -1;
-    for (var i = LIM - 1; i > 24; i--) {
-      if ('。；，、'.indexOf(out.charAt(i)) >= 0) { cut = i + 1; break; }
-    }
-    if (cut > 0) out = out.slice(0, cut);
-    return out + '…';
-  }
-
   function poIcon(r, sz) {
     var ch = esc((r.name || '?').slice(0, 1));
     return '<span class="po-ic ' + TEAM_CLS[r.team] + '" style="width:' + (sz || 38) + 'px;height:' + (sz || 38) + 'px">' +
@@ -116,13 +103,13 @@
 
   /* ---------- 正面：全部角色一格排完（4 列紧凑网格 + 跨列分组色带） ---------- */
   function poAll(b) {
-    var h = '<div class="po-all">', teams = ['townsfolk', 'outsider', 'minion', 'demon'];
+    var h = '<div class="po-flow">', teams = ['townsfolk', 'outsider', 'minion', 'demon'];
     function item(r, cls) {
-      return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 22) +
+      return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 14) +
         '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + cls + '">' + esc(r.name) + '</b>' +
         (r.setup ? '<i class="po-mk" title="会修改开局设置">⚙</i>' : '') +
         (r.otherNight > 0 && r.firstNight === 0 ? '<i class="po-mk" title="仅在其他夜行动">*</i>' : '') +
-        '</div><div class="po-ab">' + kw(brief(r.ability)) + '</div></div></div>';
+        '</div><div class="po-ab">' + kw(esc(r.ability)) + '</div></div></div>';
     }
     function band(cls, title, n) {
       return '<div class="po-band ' + cls + '"><i></i>' + title + '<span>' + n + ' 名</span></div>';
@@ -190,13 +177,13 @@
     var e = b.e, em = b.cs ? b.cs.em : '🕰️';
     var head = '<div class="po-head"><span class="po-hem">' + em + '</span><b>' + esc(e.name) + '</b>' +
       '<span class="po-hs">支持 ' + esc(e.playerNum || '5-15人') + '</span></div>';
-    var legend = '<div class="po-legend">⚙ 会修改开局设置　* 仅在其他夜行动　· 能力文本为速查摘要，完整规则见工具内角色详情</div>';
+    var legend = '<div class="po-legend">⚙ 会修改开局设置　* 仅在其他夜行动　· 本页为完整能力文本；屏幕上点击角色可查看详情与相克</div>';
 
     /* 1 张 A4 双面：第 1 页正面 = 全部角色；第 2 页背面 = 封面 + 完整规则 */
     var pgs = [
-      { c: 'po-front', h: head + poAll(b) + poNightStrip(b.roles) + legend },
+      { c: 'po-front', h: head + poAll(b) + legend },
       {
-        c: 'po-back', h: poCoverCompact(b) + poRulesBlock(b) +
+        c: 'po-back', h: poCoverCompact(b) + poNightStrip(b.roles) + poRulesBlock(b) +
           '<div class="po-note">' + (b.cs ? '背面 · 封面 / 配比表 / 核心机制 / 专属规则 / 说书人提示' : '背面 · 封面 / 配比表 / 说书人笔记') + '</div>'
       }
     ];
