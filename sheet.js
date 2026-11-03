@@ -61,7 +61,7 @@
   /* 海报速查摘要：A4 一页放得下，完整能力留在工具内 */
   function brief(t) {
     t = String(t || '').replace(/\s+/g, ' ').trim();
-    var LIM = 56;
+    var LIM = 20;
     if (t.length <= LIM) return t;
     var out = t.slice(0, LIM), cut = -1;
     for (var i = LIM - 1; i > 24; i--) {
@@ -100,24 +100,7 @@
       '</table>';
   }
 
-  /* ---------- 背面封面块（不再撑满整页，作为 A4 背面顶部） ---------- */
-  function poCover(b) {
-    var e = b.e;
-    var credit = b.custom ? '自制剧本' : (e.level ? '官方剧本 · 难度 ' + e.level : '官方剧本');
-    var em = b.cs ? b.cs.em : '🕰️';
-    return '<div class="po-cover">' +
-      '<div class="po-orn">✦ ────────── ✦</div>' +
-      '<div class="po-en">BLOOD ON THE CLOCKTOWER</div>' +
-      '<div class="po-title"><span class="po-titem">' + em + '</span>' + esc(e.name) + '</div>' +
-      '<div class="po-sub">支持 ' + esc(e.playerNum || '5-15人') + '</div>' +
-      '<div class="po-credit">' + esc(credit) + '</div>' +
-      (b.cs ? '<div class="po-quote">“' + esc(b.cs.tag) + '”</div>' : '') +
-      poComp() +
-      '<div class="po-orn">❦</div>' +
-      '</div>';
-  }
-
-  /* ---------- 夜晚行动顺序：底部横条（比侧栏省地方，A4 更好排） ---------- */
+  /* ---------- 夜晚行动顺序：底部横条 ---------- */
   function poNightStrip(roles) {
     function row(key, title) {
       var list = roles.filter(function (r) { return r[key] > 0; }).sort(function (a, b) { return a[key] - b[key]; });
@@ -131,66 +114,76 @@
       row('firstNight', '首夜') + row('otherNight', '其他夜') + '</div>';
   }
 
-  function poSec(team, roles) {
-    var g = roles.filter(function (r) { return r.team === team; });
-    if (!g.length) return '';
-    return '<div class="po-sec ' + TEAM_CLS[team] + '"><div class="po-sect"><i></i>' + TEAM_TITLE[team] +
-      '<span>' + g.length + ' 名</span></div>' +
-      '<div class="po-list">' + g.map(function (r) {
-        return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 30) +
-          '<div class="po-tx"><div class="po-nmh"><b class="po-nm">' + esc(r.name) + '</b>' +
-          (r.setup ? '<i class="po-mk" title="会修改开局设置">⚙</i>' : '') +
-          (r.otherNight > 0 && r.firstNight === 0 ? '<i class="po-mk" title="仅在其他夜行动">*</i>' : '') +
-          '</div><div class="po-ab">' + kw(brief(r.ability)) + '</div></div></div>';
-      }).join('') + '</div></div>';
-  }
-
-  /* ---------- 旅行者 + 传奇角色 ---------- */
-  function poFabBlock(b) {
+  /* ---------- 正面：全部角色一格排完（4 列紧凑网格 + 跨列分组色带） ---------- */
+  function poAll(b) {
+    var h = '<div class="po-all">', teams = ['townsfolk', 'outsider', 'minion', 'demon'];
+    function item(r, cls) {
+      return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 22) +
+        '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + cls + '">' + esc(r.name) + '</b>' +
+        (r.setup ? '<i class="po-mk" title="会修改开局设置">⚙</i>' : '') +
+        (r.otherNight > 0 && r.firstNight === 0 ? '<i class="po-mk" title="仅在其他夜行动">*</i>' : '') +
+        '</div><div class="po-ab">' + kw(brief(r.ability)) + '</div></div></div>';
+    }
+    function band(cls, title, n) {
+      return '<div class="po-band ' + cls + '"><i></i>' + title + '<span>' + n + ' 名</span></div>';
+    }
+    teams.forEach(function (t) {
+      var g = b.roles.filter(function (r) { return r.team === t; });
+      if (!g.length) return;
+      h += band(TEAM_CLS[t], TEAM_TITLE[t], g.length);
+      g.forEach(function (r) { h += item(r, TEAM_CLS[t]); });
+    });
     var trav = b.roles.filter(function (r) { return r.team === 'traveler'; });
     var fab = b.roles.filter(function (r) { return r.team === 'fabled'; });
-    if (!trav.length && !fab.length) return '';
-    return '<div class="po-fab"><div class="po-sect"><i></i>' +
-      (trav.length ? '旅行者（可选） · ' : '') + '传奇角色 · 说书人<span>' + (trav.length + fab.length) + ' 名</span></div>' +
-      '<div class="po-list po-fablist">' +
-      trav.concat(fab).map(function (r) {
-        return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 28) +
-          '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + TEAM_CLS[r.team] + '">' + esc(r.name) + '</b>' +
-          '<span class="po-tm">' + esc(r.teamCn) + '</span></div>' +
-          '<div class="po-ab">' + kw(brief(r.ability)) + '</div></div></div>';
-      }).join('') + '</div></div>';
+    if (trav.length || fab.length) {
+      h += band('travfab', (trav.length ? '旅行者（可选） · ' : '') + '传奇角色 · 说书人', trav.length + fab.length);
+      trav.forEach(function (r) { h += item(r, 'trav'); });
+      fab.forEach(function (r) { h += item(r, 'fab'); });
+    }
+    return h + '</div>';
   }
 
-  /* ---------- 背面：机制定义块 ---------- */
-  function poMech(list) {
-    if (!list || !list.length) return '';
-    return '<div class="po-bk"><b>🧬 核心机制定义（开局前必读）</b>' +
-      list.map(function (m) {
-        return '<div class="po-bkr"><i>' + esc(m.t) + '</i><span>' + esc(m.d) + '</span></div>';
-      }).join('') + '</div>';
+  /* ---------- 背面：压缩版封面（标题 + 配比表） ---------- */
+  function poCoverCompact(b) {
+    var e = b.e;
+    var credit = b.custom ? '自制剧本' : (e.level ? '官方剧本 · 难度 ' + e.level : '官方剧本');
+    var em = b.cs ? b.cs.em : '🕰️';
+    return '<div class="po-cover po-c2">' +
+      '<div class="po-orn">✦ ────────── ✦</div>' +
+      '<div class="po-en">BLOOD ON THE CLOCKTOWER</div>' +
+      '<div class="po-title"><span class="po-titem">' + em + '</span>' + esc(e.name) + '</div>' +
+      '<div class="po-sub">支持 ' + esc(e.playerNum || '5-15人') + ' · ' + esc(credit) + '</div>' +
+      (b.cs ? '<div class="po-quote">“' + esc(b.cs.tag) + '”</div>' : '') +
+      poComp() +
+      '</div>';
   }
 
-  /* ---------- 背面第二页：专属规则 + 说书人提示 ---------- */
-  function poRulesPage(b) {
-    var cs = b.cs, h = '';
-    if (cs.rules && cs.rules.length) {
-      h += '<div class="po-bk"><b>🧪 板子专属规则（开局前宣读）</b>' +
-        cs.rules.map(function (r) {
-          return '<div class="po-bkr"><i>' + esc(r.t) + '</i><span>' + esc(r.d) + '</span></div>';
+  /* ---------- 背面：规则文本去掉多余换行，连续排版省行数 ---------- */
+  function flat(t) {
+    return String(t || '').replace(/\r/g, '').replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  }
+  function poRulesBlock(b) {
+    var cs = b.cs;
+    if (!cs) {
+      return '<div class="po-bk"><b>✎ 说书人笔记</b><div class="po-lines"></div></div>' +
+        '<div class="po-backtip">本剧本为官方剧本，规则以官方魔典为准。</div>';
+    }
+    var h = '';
+    function block(title, list) {
+      if (!list || !list.length) return '';
+      return '<div class="po-bk"><b>' + title + '</b>' +
+        list.map(function (m) {
+          return '<div class="po-bkr"><i>' + esc(m.t) + '</i><span>' + esc(flat(m.d)) + '</span></div>';
         }).join('') + '</div>';
     }
+    h += block('🧬 核心机制定义（开局前必读）', cs.mech);
+    h += block('🧪 板子专属规则（开局前宣读）', cs.rules);
     if (cs.tips && cs.tips.length) {
       h += '<div class="po-bk"><b>🎙 说书人提示</b><div class="po-bkr"><span class="po-ol">' +
         cs.tips.map(function (t, i) { return (i + 1) + '. ' + esc(t); }).join('\n') +
         '</span></div></div>';
     }
-    if (!h) h = '<div class="po-backtip">本板子暂无额外规则。</div>';
     return h;
-  }
-
-  /* ---------- 官方板子：背面留笔记区 ---------- */
-  function poNotes() {
-    return '<div class="po-bk"><b>✎ 说书人笔记</b><div class="po-lines"></div></div>';
   }
 
   function renderPoster(b, host) {
@@ -199,33 +192,18 @@
       '<span class="po-hs">支持 ' + esc(e.playerNum || '5-15人') + '</span></div>';
     var legend = '<div class="po-legend">⚙ 会修改开局设置　* 仅在其他夜行动　· 能力文本为速查摘要，完整规则见工具内角色详情</div>';
 
-    var good = poSec('townsfolk', b.roles) + poSec('outsider', b.roles);
-    var evil = poSec('minion', b.roles) + poSec('demon', b.roles) + poFabBlock(b);
-    var strip = poNightStrip(b.roles);
-    var main = b.roles.filter(function (r) { return r.team !== 'traveler' && r.team !== 'fabled'; }).length;
-
-    var pgs = [];
-    if (main <= 16) {
-      pgs.push({ c: 'po-front', h: head + good + evil + strip + legend });
-    } else {
-      pgs.push({ c: 'po-front', h: head + good + strip + legend });
-      pgs.push({ c: 'po-front', h: head + evil + strip + legend });
-    }
-    pgs.push({
-      c: 'po-back',
-      h: poCover(b) + (b.cs ? poMech(b.cs.mech) : poNotes()) +
-        '<div class="po-note">' + (b.cs ? '背面 · 封面与核心机制定义' : '本剧本为官方剧本，规则以官方魔典为准') + '</div>'
-    });
-    if (b.cs) {
-      pgs.push({
-        c: 'po-back',
-        h: poRulesPage(b) + '<div class="po-note">背面 · 板子专属规则与说书人提示</div>'
-      });
-    }
+    /* 1 张 A4 双面：第 1 页正面 = 全部角色；第 2 页背面 = 封面 + 完整规则 */
+    var pgs = [
+      { c: 'po-front', h: head + poAll(b) + poNightStrip(b.roles) + legend },
+      {
+        c: 'po-back', h: poCoverCompact(b) + poRulesBlock(b) +
+          '<div class="po-note">' + (b.cs ? '背面 · 封面 / 配比表 / 核心机制 / 专属规则 / 说书人提示' : '背面 · 封面 / 配比表 / 说书人笔记') + '</div>'
+      }
+    ];
 
     var html = '<div class="poster">' + pgs.map(function (p, i) {
       return '<div class="po-page ' + p.c + '"><div class="po-fit">' + p.h + '</div>' +
-        '<div class="po-pgno">' + (i + 1) + ' / ' + pgs.length + '</div></div>';
+        '<div class="po-pgno">' + (i === 0 ? '正面' : '背面') + ' · ' + (i + 1) + ' / 2</div></div>';
     }).join('') + '</div>';
 
     host.innerHTML = html;
@@ -357,8 +335,7 @@
       '<button class="chip' + (m === 'compact' ? ' on' : '') + '" data-pomode="compact">📄 紧凑版</button>' +
       '</span>' +
       '<button class="btn sh-print" onclick="window.print()">🖨️ 打印 / 存为 PDF</button></div>' +
-      (m === 'poster' ? '<div class="po-hint noprint">📄 <b>A4 纵向打印</b>：页面已按 A4 实际尺寸排版（210×297mm），打印时缩放选「默认／100%」即可，多页请选择「双面打印」。<br>' +
-        '固定顺序：<b>① 善良角色</b>　<b>② 邪恶与特殊角色</b>　<b>③ 封面 · 配比表 · 核心机制</b>　<b>④ 板子专属规则 · 说书人提示</b>（后两页即“背面”）。</div>' : '');
+      (m === 'poster' ? '<div class="po-hint noprint">📄 <b>1 张 A4 双面 = 2 页</b>：<b>正面</b>全部角色速查 + 夜晚行动顺序，<b>背面</b>封面 / 配比表 / 核心机制 / 板子专属规则 / 说书人提示。<br>页面已按 A4 实际尺寸（210×297mm）排版，打印时缩放选「默认／100%」、方向纵向、勾选「双面打印（长边翻转）」即可。</div>' : '');
 
     var wrap = document.createElement('div');
     if (m === 'poster') renderPoster(b, wrap);

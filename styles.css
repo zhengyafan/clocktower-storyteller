@@ -607,7 +607,7 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 /* ---------- 内页 ---------- */
 .po-inner{background:#f7f1e0;border:2px solid #a3834e;border-radius:6px;margin-top:14px;
   padding:16px 16px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.po-head{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid #a3834e;padding-bottom:8px;margin-bottom:12px}
+.po-head{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid #a3834e;padding-bottom:6px;margin-bottom:8px}
 .po-head b{font-size:20px;color:#5a3a14;letter-spacing:3px;font-family:'Noto Serif SC','Songti SC',serif}
 .po-hem{font-size:18px}
 .po-hs{margin-left:auto;font-size:12.5px;color:#7a6238;font-weight:600}
@@ -656,7 +656,7 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-rules>b{font-size:12.5px;color:#5a3a14}
 .po-rules span{display:block;font-size:11.5px;line-height:1.6;color:#5a4a2a;margin-top:4px}
 .po-rules span i{font-style:normal;font-weight:800;color:#8a5a1e;margin-right:4px}
-.po-legend{font-size:10px;color:#a08a5e;margin-top:6px;line-height:1.7;text-align:center}
+.po-legend{font-size:10px;color:#a08a5e;margin-top:4px;line-height:1.6;text-align:center}
 .po-tabs{display:inline-flex;gap:5px;margin-left:auto}
 .po-tabs .chip{font-size:11.5px;padding:3px 10px}
 /* ---------- A4 固定纸张画布（正面 / 背面） ---------- */
@@ -712,3 +712,41 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-hint{font-size:11.5px;color:var(--text-faint);background:var(--bg-soft);border:1px dashed var(--line);
   border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.6}
 .po-hint b{color:var(--accent)}
+
+/* ============================================================
+   1 张 A4 双面（正面=全部角色 / 背面=封面+完整规则）
+   ============================================================ */
+.po-all{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 6px;align-content:start}
+.po-band{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;
+  letter-spacing:.5px;border-bottom:1.5px solid currentColor;padding-bottom:1px;margin-top:2px}
+.po-band i{width:4px;height:11px;border-radius:1px;background:currentColor;display:inline-block}
+.po-band span{margin-left:auto;font-size:9.5px;font-weight:600;opacity:.7}
+.po-band.good{color:#1e5aa8}.po-band.evil{color:#a01818}
+.po-band.travfab{color:#6a3fa0}.po-band.fab{color:#7a5c14}
+.po-all .po-item{padding:2px 5px;gap:5px;border-radius:6px}
+.po-all .po-nm{font-size:11.5px}
+.po-all .po-mk{font-size:9.5px}
+.po-all .po-ab{font-size:10.5px;line-height:1.34;margin-top:0}
+.po-all .evil .po-kw{color:#a01818}
+/* 背面压缩封面 */
+.po-cover.po-c2{padding:9px 16px 7px;margin-bottom:7px;box-shadow:none;border-width:2px}
+.po-c2::before{inset:4px}
+.po-c2 .po-orn{font-size:10px;margin:0}
+.po-c2 .po-en{font-size:9px;letter-spacing:4px;margin:3px 0 0}
+.po-c2 .po-title{font-size:23px;margin:2px 0 0;letter-spacing:4px}
+.po-c2 .po-titem{font-size:19px;margin-right:6px}
+.po-c2 .po-sub{font-size:11.5px;margin:3px 0 0}
+.po-c2 .po-quote{font-size:11px;margin:2px 0 0}
+.po-c2 .po-comp{margin:6px auto 1px;font-size:11px}
+.po-c2 .po-comp th{padding:1px 8px 1px 4px}
+.po-c2 .po-comp td{padding:1px 8px;min-width:26px}
+/* 背面规则：完整文本但紧凑排版 */
+.po-back .po-bk{margin-top:6px;padding:6px 9px;border-radius:6px}
+.po-back .po-bk>b{font-size:11px}
+.po-back .po-bkr{margin-top:4px}
+.po-back .po-bkr i{font-size:10px}
+.po-back .po-bkr span{font-size:9.5px;line-height:1.42;white-space:normal;margin-top:1px}
+.po-back .po-bkr span.po-ol{font-size:9.5px;line-height:1.42;white-space:pre-wrap}
+.po-back .po-note{margin-top:6px;font-size:9px}
+.po-back .po-lines{height:150px}
+.po-back .po-backtip{margin-top:8px;font-size:10.5px}
