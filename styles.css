@@ -582,8 +582,9 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 /* ============================================================
    一览表 · 海报版（仿官方速查表版式，打印 A4 纵向）
    ============================================================ */
-.po-wrap{margin-top:10px}
-.poster{max-width:860px;margin:0 auto;font-family:var(--font-sans,'Noto Serif SC',serif)}
+/* 页面画布固定 794px（≈A4 宽），窄屏横向滚动，保证屏幕上看到的就是打印出来的样子 */
+.po-wrap{margin-top:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.poster{max-width:860px;min-width:794px;margin:0 auto;font-family:var(--font-sans,'Noto Serif SC',serif)}
 /* ---------- 封面 ---------- */
 .po-cover{position:relative;background:#f5eedb;border:3px double #8a6a3a;border-radius:6px;
   padding:34px 26px 26px;text-align:center;box-shadow:0 4px 18px rgba(74,52,20,.18);
@@ -611,26 +612,25 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-hem{font-size:18px}
 .po-hs{margin-left:auto;font-size:12.5px;color:#7a6238;font-weight:600}
 .po-grid{display:grid;grid-template-columns:56px 1fr 56px;gap:10px;align-items:start}
-.po-rail{display:flex;flex-direction:column;align-items:center;gap:6px;
+.po-rail{display:flex;flex-direction:column;align-items:center;gap:3px;
   background:#efe5cc;border:1px solid #d8c49a;border-radius:8px;padding:8px 4px}
 .po-rail-t{font-size:11px;font-weight:800;color:#8a5a1e;letter-spacing:3px;writing-mode:vertical-rl;letter-spacing:6px}
-.po-rail-i{display:flex;flex-direction:column;align-items:center;gap:1px}
-.po-rail-i b{font-size:10px;color:#8a6a3a;font-weight:600}
+.po-rail-i{display:flex;flex-direction:column;align-items:center;gap:0}
+.po-rail-i b{font-size:9px;color:#8a6a3a;font-weight:600;line-height:1.1}
 .po-rail-e{font-size:11px;color:#b09a6a}
 .po-mid{min-width:0}
-.po-sec{margin-bottom:12px}
-.po-sect{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:800;letter-spacing:1px;
-  border-bottom:1.5px solid currentColor;padding-bottom:4px;margin-bottom:8px}
+.po-sec{margin-bottom:7px}
+.po-sect{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;letter-spacing:1px;
+  border-bottom:1.5px solid currentColor;padding-bottom:3px;margin-bottom:4px}
 .po-sect i{width:5px;height:15px;border-radius:2px;background:currentColor;display:inline-block}
 .po-sect span{font-size:11px;font-weight:600;opacity:.65;margin-left:auto}
 .po-sec.good .po-sect{color:#1e5aa8}
 .po-sec.evil .po-sect{color:#a01818}
 .po-sec.trav .po-sect{color:#6a3fa0}
 .po-sec.fab .po-sect{color:#7a5c14}
-.po-list{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
-@media (max-width:640px){.po-list{grid-template-columns:1fr}}
-.po-item{display:flex;gap:8px;align-items:flex-start;background:rgba(255,255,255,.55);
-  border:1px solid #e0d2ac;border-radius:8px;padding:7px 9px;cursor:pointer}
+.po-list{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px}
+.po-item{display:flex;gap:6px;align-items:flex-start;background:rgba(255,255,255,.55);
+  border:1px solid #e0d2ac;border-radius:8px;padding:4px 6px;cursor:pointer}
 .po-item:active{transform:scale(.995)}
 .po-ic{position:relative;flex:0 0 auto;border-radius:50%;overflow:hidden;display:inline-flex;
   align-items:center;justify-content:center;background:#d8c49a}
@@ -640,42 +640,75 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-ic.trav{background:#6a3fa0}.po-ic.fab{background:#a3834e}
 .po-tx{min-width:0;flex:1}
 .po-nmh{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-.po-nm{font-size:14px;font-weight:800;letter-spacing:.5px}
+.po-nm{font-size:13px;font-weight:800;letter-spacing:.5px}
 .po-sec.good .po-nm{color:#1e5aa8}.po-sec.evil .po-nm{color:#a01818}
 .po-nm.good{color:#1e5aa8}.po-nm.evil{color:#a01818}
 .po-nm.trav{color:#6a3fa0}.po-nm.fab{color:#7a5c14}
 .po-tm{font-size:10.5px;color:#8a6a3a;font-weight:600}
 .po-mk{font-style:normal;font-size:11px;color:#a01818;font-weight:700}
-.po-ab{font-size:12px;line-height:1.62;color:#4a3a20;margin-top:2px}
+.po-ab{font-size:11px;line-height:1.45;color:#4a3a20;margin-top:1px}
 .po-kw{color:#1e5aa8;font-weight:700}
 .po-sec.evil .po-kw,.po-fab .po-kw{color:#a01818}
 .po-fab{margin-top:4px}
 .po-fab .po-sect{color:#7a5c14}
-.po-fablist{grid-template-columns:1fr 1fr}
-@media (max-width:640px){.po-fablist{grid-template-columns:1fr}}
+.po-fablist{grid-template-columns:repeat(3,1fr)}
 .po-rules{background:#efe5cc;border:1px dashed #b09a6a;border-radius:8px;padding:9px 12px;margin-top:10px}
 .po-rules>b{font-size:12.5px;color:#5a3a14}
 .po-rules span{display:block;font-size:11.5px;line-height:1.6;color:#5a4a2a;margin-top:4px}
 .po-rules span i{font-style:normal;font-weight:800;color:#8a5a1e;margin-right:4px}
-.po-legend{font-size:10.5px;color:#a08a5e;margin-top:10px;line-height:1.7;text-align:center}
+.po-legend{font-size:10px;color:#a08a5e;margin-top:6px;line-height:1.7;text-align:center}
 .po-tabs{display:inline-flex;gap:5px;margin-left:auto}
 .po-tabs .chip{font-size:11.5px;padding:3px 10px}
-/* 手机上：左右夜序栏改为横排在顶部/底部 */
-@media (max-width:640px){
-  .po-grid{display:flex;flex-direction:column}
-  .po-rail{flex-direction:row;flex-wrap:wrap;justify-content:flex-start;padding:8px}
-  .po-rail-t{writing-mode:horizontal-tb;letter-spacing:2px;margin-right:6px}
-}
-/* ---------- 打印：A4 纵向，封面独占一页 ---------- */
+/* ---------- A4 固定纸张画布（正面 / 背面） ---------- */
+.poster{display:flex;flex-direction:column;gap:16px;align-items:center}
+.po-page{position:relative;width:100%;max-width:794px;aspect-ratio:210/297;
+  background:#f7f1e0;border:1px solid #c8b088;border-radius:2px;
+  box-shadow:0 4px 18px rgba(74,52,20,.18);padding:9mm;overflow:hidden;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.po-page::after{content:'';position:absolute;inset:3mm;border:1px solid #d8c49a;pointer-events:none;border-radius:1px}
+.po-fit{position:relative}
+.po-page .po-inner{background:transparent;border:none;border-radius:0;padding:0;margin:0;box-shadow:none}
+.po-page .po-cover{padding:14px 18px 12px;margin-bottom:12px;box-shadow:none}
+.po-page .po-title{font-size:30px}
+.po-page .po-comp{margin:12px auto 6px;font-size:13px}
+.po-bk{margin-top:10px;background:#efe5cc;border:1px dashed #b09a6a;border-radius:8px;padding:9px 12px}
+.po-bk>b{font-size:12.5px;color:#5a3a14}
+.po-bkr{margin-top:7px}
+.po-bkr i{display:block;font-style:normal;font-weight:800;color:#8a5a1e;font-size:11.5px}
+.po-bkr span{display:block;font-size:10.5px;line-height:1.58;color:#5a4a2a;white-space:pre-wrap;margin-top:2px}
+.po-backtip{margin-top:12px;font-size:12px;color:#8a6a3a;text-align:center;line-height:1.8}
+.po-note{font-size:10.5px;color:#a08a5e;margin-top:12px;text-align:center}
+/* ---------- 夜晚行动顺序横条 ---------- */
+.po-ns{margin-top:7px;background:#efe5cc;border:1px solid #d8c49a;border-radius:8px;padding:5px 8px}
+.po-ns-t{font-size:10px;font-weight:800;color:#8a5a1e;letter-spacing:2px;margin-bottom:3px}
+.po-ns-r{display:flex;align-items:flex-start;gap:6px;margin-top:2px}
+.po-ns-r>i{font-style:normal;font-size:9.5px;font-weight:800;color:#8a5a1e;flex:0 0 30px;line-height:18px}
+.po-ns-l{display:flex;flex-wrap:wrap;gap:1px 3px;align-items:flex-start;min-width:0}
+.po-ns-i{display:flex;flex-direction:column;align-items:center}
+.po-ns-i b{font-size:8px;color:#8a6a3a;font-weight:700;line-height:1.1;margin-top:1px}
+.po-ns-e{font-size:11px;color:#b09a6a;line-height:20px}
+/* ---------- 页码 / 笔记区 ---------- */
+.po-pgno{position:absolute;right:13px;bottom:6px;font-size:9.5px;color:#a08a5e;letter-spacing:1px}
+.po-lines{height:118px;margin-top:6px;border-radius:4px;
+  background:repeating-linear-gradient(180deg,#fff 0 20px,#e6dcc0 20px 21px)}
+.po-ol{white-space:pre-wrap!important}
+/* ---------- 打印：A4 双面，每页严格一页 ---------- */
 @media print{
-  @page{size:A4 portrait;margin:8mm}
+  @page{size:A4 portrait;margin:0}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  body{background:#fff!important}
-  .noprint,#tabbar,#topbar{display:none!important}
-  .poster{max-width:100%;margin:0}
-  .po-cover{page-break-after:always;break-after:page;box-shadow:none}
-  .po-inner{box-shadow:none;border-width:1.5px;margin-top:0}
-  .po-sec,.po-fab,.po-rules{break-inside:avoid;page-break-inside:avoid}
-  .po-item{break-inside:avoid;page-break-inside:avoid}
-  .po-cover{min-height:255mm;display:flex;flex-direction:column;justify-content:center}
+  html,body{margin:0!important;padding:0!important;background:#fff!important}
+  #view{padding:0!important;margin:0!important;max-width:none!important}
+  #view>*:not(.poster){display:none!important}
+  .noprint,#tabbar,#topbar,.topbar,.backbar,.po-hint{display:none!important}
+  .poster{display:block;gap:0;max-width:none;margin:0}
+  .po-wrap{margin:0!important;padding:0!important;overflow:visible!important}
+  .po-page{width:210mm;height:297mm;max-width:none;aspect-ratio:auto;
+    box-shadow:none;border:none;border-radius:0;padding:9mm;
+    page-break-after:always;break-after:page;overflow:hidden}
+  .po-page:last-child{page-break-after:auto;break-after:auto}
+  .po-sec,.po-fab,.po-item,.po-bk{break-inside:avoid;page-break-inside:avoid}
+  .po-rail{position:static}
 }
+.po-hint{font-size:11.5px;color:var(--text-faint);background:var(--bg-soft);border:1px dashed var(--line);
+  border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.6}
+.po-hint b{color:var(--accent)}

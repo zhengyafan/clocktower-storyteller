@@ -58,6 +58,19 @@
     return t;
   }
 
+  /* 海报速查摘要：A4 一页放得下，完整能力留在工具内 */
+  function brief(t) {
+    t = String(t || '').replace(/\s+/g, ' ').trim();
+    var LIM = 56;
+    if (t.length <= LIM) return t;
+    var out = t.slice(0, LIM), cut = -1;
+    for (var i = LIM - 1; i > 24; i--) {
+      if ('。；，、'.indexOf(out.charAt(i)) >= 0) { cut = i + 1; break; }
+    }
+    if (cut > 0) out = out.slice(0, cut);
+    return out + '…';
+  }
+
   function poIcon(r, sz) {
     var ch = esc((r.name || '?').slice(0, 1));
     return '<span class="po-ic ' + TEAM_CLS[r.team] + '" style="width:' + (sz || 38) + 'px;height:' + (sz || 38) + 'px">' +
@@ -87,6 +100,7 @@
       '</table>';
   }
 
+  /* ---------- 背面封面块（不再撑满整页，作为 A4 背面顶部） ---------- */
   function poCover(b) {
     var e = b.e;
     var credit = b.custom ? '自制剧本' : (e.level ? '官方剧本 · 难度 ' + e.level : '官方剧本');
@@ -100,16 +114,21 @@
       (b.cs ? '<div class="po-quote">“' + esc(b.cs.tag) + '”</div>' : '') +
       poComp() +
       '<div class="po-orn">❦</div>' +
-      '<div class="po-note">打印后沿边框裁开，即是一张标准的说书人速查海报</div>' +
       '</div>';
   }
 
-  function poRail(roles, key, title) {
-    var list = roles.filter(function (r) { return r[key] > 0; }).sort(function (a, b) { return a[key] - b[key]; });
-    return '<div class="po-rail"><div class="po-rail-t">' + title + '</div>' +
-      list.map(function (r, i) {
-        return '<div class="po-rail-i" title="' + esc(r.name) + ' · 第' + (i + 1) + '位">' + poIcon(r, 30) + '<b>' + (i + 1) + '</b></div>';
-      }).join('') + (list.length ? '' : '<div class="po-rail-e">—</div>') + '</div>';
+  /* ---------- 夜晚行动顺序：底部横条（比侧栏省地方，A4 更好排） ---------- */
+  function poNightStrip(roles) {
+    function row(key, title) {
+      var list = roles.filter(function (r) { return r[key] > 0; }).sort(function (a, b) { return a[key] - b[key]; });
+      return '<div class="po-ns-r"><i>' + title + '</i><div class="po-ns-l">' +
+        list.map(function (r, i) {
+          return '<span class="po-ns-i" title="' + esc(r.name) + ' · 第' + (i + 1) + '位">' +
+            poIcon(r, 18) + '<b>' + (i + 1) + '</b></span>';
+        }).join('') + (list.length ? '' : '<span class="po-ns-e">—</span>') + '</div></div>';
+    }
+    return '<div class="po-ns"><div class="po-ns-t">夜晚行动顺序（数字 = 当夜第几步）</div>' +
+      row('firstNight', '首夜') + row('otherNight', '其他夜') + '</div>';
   }
 
   function poSec(team, roles) {
@@ -118,59 +137,131 @@
     return '<div class="po-sec ' + TEAM_CLS[team] + '"><div class="po-sect"><i></i>' + TEAM_TITLE[team] +
       '<span>' + g.length + ' 名</span></div>' +
       '<div class="po-list">' + g.map(function (r) {
-        return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 38) +
+        return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 30) +
           '<div class="po-tx"><div class="po-nmh"><b class="po-nm">' + esc(r.name) + '</b>' +
           (r.setup ? '<i class="po-mk" title="会修改开局设置">⚙</i>' : '') +
           (r.otherNight > 0 && r.firstNight === 0 ? '<i class="po-mk" title="仅在其他夜行动">*</i>' : '') +
-          '</div><div class="po-ab">' + kw(r.ability) + '</div></div></div>';
+          '</div><div class="po-ab">' + kw(brief(r.ability)) + '</div></div></div>';
       }).join('') + '</div></div>';
   }
 
-  function renderPoster(b, host) {
-    var e = b.e;
-    var html = '<div class="poster">';
-
-    html += poCover(b);
-
-    html += '<div class="po-inner">' +
-      '<div class="po-head"><span class="po-hem">' + (b.cs ? b.cs.em : '🕰️') + '</span><b>' + esc(e.name) + '</b>' +
-      '<span class="po-hs">支持 ' + esc(e.playerNum || '5-15人') + '</span></div>';
-
-    html += '<div class="po-grid">' +
-      poRail(b.roles, 'firstNight', '首夜') +
-      '<div class="po-mid">' +
-      poSec('townsfolk', b.roles) + poSec('outsider', b.roles) +
-      poSec('minion', b.roles) + poSec('demon', b.roles) +
-      '</div>' +
-      poRail(b.roles, 'otherNight', '其他夜') +
-      '</div>';
-
+  /* ---------- 旅行者 + 传奇角色 ---------- */
+  function poFabBlock(b) {
     var trav = b.roles.filter(function (r) { return r.team === 'traveler'; });
     var fab = b.roles.filter(function (r) { return r.team === 'fabled'; });
-    if (trav.length || fab.length) {
-      html += '<div class="po-fab"><div class="po-sect"><i></i>' +
-        (trav.length ? '旅行者（可选） · ' : '') + '传奇角色 · 说书人<span>' + (trav.length + fab.length) + ' 名</span></div>' +
-        '<div class="po-list po-fablist">' +
-        trav.concat(fab).map(function (r) {
-          return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 32) +
-            '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + TEAM_CLS[r.team] + '">' + esc(r.name) + '</b>' +
-            '<span class="po-tm">' + esc(r.teamCn) + '</span></div>' +
-            '<div class="po-ab">' + kw(r.ability) + '</div></div></div>';
-        }).join('') + '</div></div>';
-    }
-
-    if (b.cs && b.cs.rules && b.cs.rules.length) {
-      html += '<div class="po-rules"><b>本板子专属规则（开局前宣读）</b>' +
-        b.cs.rules.map(function (r) { return '<span><i>' + esc(r.t) + '</i>' + esc(r.d) + '</span>'; }).join('') +
-        '</div>';
-    }
-
-    html += '<div class="po-legend">* 代表仅在其他夜行动　⚙ 代表会修改开局设置　左右两栏为夜晚行动顺序（数字 = 当夜第几步）' +
-      '　·　角色能力以官方魔典口径为准，点击任意角色可查看详情</div>';
-
-    html += '</div></div>';
-    host.innerHTML = html;
+    if (!trav.length && !fab.length) return '';
+    return '<div class="po-fab"><div class="po-sect"><i></i>' +
+      (trav.length ? '旅行者（可选） · ' : '') + '传奇角色 · 说书人<span>' + (trav.length + fab.length) + ' 名</span></div>' +
+      '<div class="po-list po-fablist">' +
+      trav.concat(fab).map(function (r) {
+        return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 28) +
+          '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + TEAM_CLS[r.team] + '">' + esc(r.name) + '</b>' +
+          '<span class="po-tm">' + esc(r.teamCn) + '</span></div>' +
+          '<div class="po-ab">' + kw(brief(r.ability)) + '</div></div></div>';
+      }).join('') + '</div></div>';
   }
+
+  /* ---------- 背面：机制定义块 ---------- */
+  function poMech(list) {
+    if (!list || !list.length) return '';
+    return '<div class="po-bk"><b>🧬 核心机制定义（开局前必读）</b>' +
+      list.map(function (m) {
+        return '<div class="po-bkr"><i>' + esc(m.t) + '</i><span>' + esc(m.d) + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  /* ---------- 背面第二页：专属规则 + 说书人提示 ---------- */
+  function poRulesPage(b) {
+    var cs = b.cs, h = '';
+    if (cs.rules && cs.rules.length) {
+      h += '<div class="po-bk"><b>🧪 板子专属规则（开局前宣读）</b>' +
+        cs.rules.map(function (r) {
+          return '<div class="po-bkr"><i>' + esc(r.t) + '</i><span>' + esc(r.d) + '</span></div>';
+        }).join('') + '</div>';
+    }
+    if (cs.tips && cs.tips.length) {
+      h += '<div class="po-bk"><b>🎙 说书人提示</b><div class="po-bkr"><span class="po-ol">' +
+        cs.tips.map(function (t, i) { return (i + 1) + '. ' + esc(t); }).join('\n') +
+        '</span></div></div>';
+    }
+    if (!h) h = '<div class="po-backtip">本板子暂无额外规则。</div>';
+    return h;
+  }
+
+  /* ---------- 官方板子：背面留笔记区 ---------- */
+  function poNotes() {
+    return '<div class="po-bk"><b>✎ 说书人笔记</b><div class="po-lines"></div></div>';
+  }
+
+  function renderPoster(b, host) {
+    var e = b.e, em = b.cs ? b.cs.em : '🕰️';
+    var head = '<div class="po-head"><span class="po-hem">' + em + '</span><b>' + esc(e.name) + '</b>' +
+      '<span class="po-hs">支持 ' + esc(e.playerNum || '5-15人') + '</span></div>';
+    var legend = '<div class="po-legend">⚙ 会修改开局设置　* 仅在其他夜行动　· 能力文本为速查摘要，完整规则见工具内角色详情</div>';
+
+    var good = poSec('townsfolk', b.roles) + poSec('outsider', b.roles);
+    var evil = poSec('minion', b.roles) + poSec('demon', b.roles) + poFabBlock(b);
+    var strip = poNightStrip(b.roles);
+    var main = b.roles.filter(function (r) { return r.team !== 'traveler' && r.team !== 'fabled'; }).length;
+
+    var pgs = [];
+    if (main <= 16) {
+      pgs.push({ c: 'po-front', h: head + good + evil + strip + legend });
+    } else {
+      pgs.push({ c: 'po-front', h: head + good + strip + legend });
+      pgs.push({ c: 'po-front', h: head + evil + strip + legend });
+    }
+    pgs.push({
+      c: 'po-back',
+      h: poCover(b) + (b.cs ? poMech(b.cs.mech) : poNotes()) +
+        '<div class="po-note">' + (b.cs ? '背面 · 封面与核心机制定义' : '本剧本为官方剧本，规则以官方魔典为准') + '</div>'
+    });
+    if (b.cs) {
+      pgs.push({
+        c: 'po-back',
+        h: poRulesPage(b) + '<div class="po-note">背面 · 板子专属规则与说书人提示</div>'
+      });
+    }
+
+    var html = '<div class="poster">' + pgs.map(function (p, i) {
+      return '<div class="po-page ' + p.c + '"><div class="po-fit">' + p.h + '</div>' +
+        '<div class="po-pgno">' + (i + 1) + ' / ' + pgs.length + '</div></div>';
+    }).join('') + '</div>';
+
+    host.innerHTML = html;
+    setTimeout(fitPages, 30);
+    setTimeout(fitPages, 300);
+    setTimeout(fitPages, 900);
+  }
+
+  /* 把每页内容按 A4 画布等比缩放，确保一页装得下。
+   * 二分收敛：排版宽度随缩放变化，高度也会跟着变，一次算不准。 */
+  function fitPages() {
+    var pages = document.querySelectorAll('.po-page');
+    Array.prototype.forEach.call(pages, function (pg) {
+      var inner = pg.querySelector('.po-fit');
+      if (!inner) return;
+      var cs = window.getComputedStyle(pg);
+      var pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+      var pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+      var availW = pg.clientWidth - pl - pr;
+      var availH = pg.clientHeight - pt - pb;
+      if (availH <= 0 || availW <= 0) return;
+      inner.style.transform = 'none';
+      var lo = 0.3, hi = 1, s = 1, k;
+      for (k = 0; k < 9; k++) {
+        s = (lo + hi) / 2;
+        inner.style.width = (availW / s) + 'px';
+        if (inner.scrollHeight * s <= availH) lo = s; else hi = s;
+      }
+      s = lo;
+      inner.style.width = (availW / s) + 'px';
+      inner.style.transformOrigin = 'top left';
+      inner.style.transform = s < 0.999 ? 'scale(' + s.toFixed(4) + ')' : 'none';
+    });
+  }
+  window.addEventListener('beforeprint', fitPages);
+  window.addEventListener('resize', function () { setTimeout(fitPages, 60); });
 
   /* ============================================================
    *  紧凑版（屏幕阅读）
@@ -265,7 +356,9 @@
       '<button class="chip' + (m === 'poster' ? ' on' : '') + '" data-pomode="poster">🖼️ 海报版</button>' +
       '<button class="chip' + (m === 'compact' ? ' on' : '') + '" data-pomode="compact">📄 紧凑版</button>' +
       '</span>' +
-      '<button class="btn sh-print" onclick="window.print()">🖨️ 打印 / 存为 PDF</button></div>';
+      '<button class="btn sh-print" onclick="window.print()">🖨️ 打印 / 存为 PDF</button></div>' +
+      (m === 'poster' ? '<div class="po-hint noprint">📄 <b>A4 纵向打印</b>：页面已按 A4 实际尺寸排版（210×297mm），打印时缩放选「默认／100%」即可，多页请选择「双面打印」。<br>' +
+        '固定顺序：<b>① 善良角色</b>　<b>② 邪恶与特殊角色</b>　<b>③ 封面 · 配比表 · 核心机制</b>　<b>④ 板子专属规则 · 说书人提示</b>（后两页即“背面”）。</div>' : '');
 
     var wrap = document.createElement('div');
     if (m === 'poster') renderPoster(b, wrap);
