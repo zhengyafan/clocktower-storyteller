@@ -138,6 +138,26 @@
   }
 
   window.BOTCSheet = {
-    route: function (r) { render(r.a); }
+    route: function (r) { render(r.a); },
+    /* 兜底：如果 app.js 是旧缓存（还没有 sheet 路由），这里自己接管 */
+    selfHeal: selfHeal
   };
+
+  /* ---------------- 自愈接管 ----------------
+   * 页面 HTML 是 network-first（总是新的），但 app.js 是 stale-while-revalidate，
+   * 首次打开可能拿到旧版 app.js（没有 sheet 路由）→ 点击会走默认分支回首页。
+   * 这里延迟一小会儿检查：若 #view 里没有渲染出本页，就自己渲染一次。 */
+  function selfHeal() {
+    var h = location.hash || '';
+    if (h.indexOf('#/sheet/') !== 0) return;
+    var v = document.getElementById('view');
+    if (!v) return;
+    if (v.querySelector('.sh-hero, .sh-comp')) return;   /* 已经渲染过 */
+    render((h.replace(/^#\/sheet\/?/, '') || '').split('/')[0]);
+  }
+
+  window.addEventListener('hashchange', function () { setTimeout(selfHeal, 80); });
+  window.addEventListener('load', function () { setTimeout(selfHeal, 150); });
+  setTimeout(selfHeal, 500);
+  setTimeout(selfHeal, 1500);
 })();

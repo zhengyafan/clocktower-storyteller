@@ -88,6 +88,13 @@
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('sw.js').catch(function () { });
+    /* 新版 SW 激活后自动刷新一次，避免一直用旧缓存（防抖：30s 内不重复刷新） */
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      var last = +(sessionStorage.getItem('botc_sw_reload') || 0);
+      if (Date.now() - last < 30000) return;
+      sessionStorage.setItem('botc_sw_reload', String(Date.now()));
+      location.reload();
+    });
   });
 }
 </script>
