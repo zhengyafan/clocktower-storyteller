@@ -683,10 +683,10 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-back .po-ns{margin-top:8px}
 .po-ns-t{font-size:10px;font-weight:800;color:#8a5a1e;letter-spacing:2px;margin-bottom:3px}
 .po-ns-r{display:flex;align-items:flex-start;gap:6px;margin-top:2px}
-.po-ns-r>i{font-style:normal;font-size:9.5px;font-weight:800;color:#8a5a1e;flex:0 0 30px;line-height:18px}
-.po-ns-l{display:flex;flex-wrap:wrap;gap:1px 3px;align-items:flex-start;min-width:0}
+.po-ns-r>i{font-style:normal;font-size:9.5px;font-weight:800;color:#8a5a1e;flex:0 0 30px;line-height:16px}
+.po-ns-l{display:flex;flex-wrap:wrap;gap:0 2px;align-items:flex-start;min-width:0}
 .po-ns-i{display:flex;flex-direction:column;align-items:center}
-.po-ns-i b{font-size:8px;color:#8a6a3a;font-weight:700;line-height:1.1;margin-top:1px}
+.po-ns-i b{font-size:7.5px;color:#8a6a3a;font-weight:700;line-height:1.1;margin-top:0}
 .po-ns-e{font-size:11px;color:#b09a6a;line-height:20px}
 /* ---------- 页码 / 笔记区 ---------- */
 .po-pgno{position:absolute;right:13px;bottom:6px;font-size:9.5px;color:#a08a5e;letter-spacing:1px}

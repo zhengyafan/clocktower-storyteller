@@ -94,10 +94,10 @@
       return '<div class="po-ns-r"><i>' + title + '</i><div class="po-ns-l">' +
         list.map(function (r, i) {
           return '<span class="po-ns-i" title="' + esc(r.name) + ' · 第' + (i + 1) + '位">' +
-            poIcon(r, 18) + '<b>' + (i + 1) + '</b></span>';
+            poIcon(r, 16) + '<b>' + (i + 1) + '</b></span>';
         }).join('') + (list.length ? '' : '<span class="po-ns-e">—</span>') + '</div></div>';
     }
-    return '<div class="po-ns"><div class="po-ns-t">夜晚行动顺序（数字 = 当夜第几步）</div>' +
+    return '<div class="po-ns"><div class="po-ns-t">夜晚行动顺序（数字 = 当夜第几步）　·　⚙ 修改开局设置　* 仅在其他夜行动</div>' +
       row('firstNight', '首夜') + row('otherNight', '其他夜') + '</div>';
   }
 
@@ -177,13 +177,12 @@
     var e = b.e, em = b.cs ? b.cs.em : '🕰️';
     var head = '<div class="po-head"><span class="po-hem">' + em + '</span><b>' + esc(e.name) + '</b>' +
       '<span class="po-hs">支持 ' + esc(e.playerNum || '5-15人') + '</span></div>';
-    var legend = '<div class="po-legend">⚙ 会修改开局设置　* 仅在其他夜行动　· 本页为完整能力文本；屏幕上点击角色可查看详情与相克</div>';
 
     /* 1 张 A4 双面：第 1 页正面 = 全部角色；第 2 页背面 = 封面 + 完整规则 */
     var pgs = [
-      { c: 'po-front', h: head + poAll(b) + legend },
+      { c: 'po-front', h: head + poAll(b) + poNightStrip(b.roles) },
       {
-        c: 'po-back', h: poCoverCompact(b) + poNightStrip(b.roles) + poRulesBlock(b) +
+        c: 'po-back', h: poCoverCompact(b) + poRulesBlock(b) +
           '<div class="po-note">' + (b.cs ? '背面 · 封面 / 配比表 / 核心机制 / 专属规则 / 说书人提示' : '背面 · 封面 / 配比表 / 说书人笔记') + '</div>'
       }
     ];
