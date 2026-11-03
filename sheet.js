@@ -101,35 +101,45 @@
       row('firstNight', '首夜') + row('otherNight', '其他夜') + '</div>';
   }
 
-  /* ---------- 正面：全部角色一格排完（4 列紧凑网格 + 跨列分组色带） ---------- */
+  /* ---------- 正面：善良 + 邪恶角色（3 栏流式，能力完整文本） ---------- */
+  function poItem(r, cls) {
+    return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 14) +
+      '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + cls + '">' + esc(r.name) + '</b>' +
+      (r.setup ? '<i class="po-mk" title="会修改开局设置">⚙</i>' : '') +
+      (r.otherNight > 0 && r.firstNight === 0 ? '<i class="po-mk" title="仅在其他夜行动">*</i>' : '') +
+      '</div><div class="po-ab">' + kw(esc(r.ability)) + '</div></div></div>';
+  }
+  function poBand(cls, title, n) {
+    return '<div class="po-band ' + cls + '"><i></i>' + title + '<span>' + n + ' 名</span></div>';
+  }
   function poAll(b) {
     var h = '<div class="po-flow">', teams = ['townsfolk', 'outsider', 'minion', 'demon'];
-    function item(r, cls) {
-      return '<div class="po-item" data-role="' + r.id + '">' + poIcon(r, 14) +
-        '<div class="po-tx"><div class="po-nmh"><b class="po-nm ' + cls + '">' + esc(r.name) + '</b>' +
-        (r.setup ? '<i class="po-mk" title="会修改开局设置">⚙</i>' : '') +
-        (r.otherNight > 0 && r.firstNight === 0 ? '<i class="po-mk" title="仅在其他夜行动">*</i>' : '') +
-        '</div><div class="po-ab">' + kw(esc(r.ability)) + '</div></div></div>';
-    }
-    function band(cls, title, n) {
-      return '<div class="po-band ' + cls + '"><i></i>' + title + '<span>' + n + ' 名</span></div>';
-    }
     teams.forEach(function (t) {
       var g = b.roles.filter(function (r) { return r.team === t; });
       if (!g.length) return;
-      h += band(TEAM_CLS[t], TEAM_TITLE[t], g.length);
-      g.forEach(function (r) { h += item(r, TEAM_CLS[t]); });
+      h += poBand(TEAM_CLS[t], TEAM_TITLE[t], g.length);
+      g.forEach(function (r) { h += poItem(r, TEAM_CLS[t]); });
     });
-    var trav = b.roles.filter(function (r) { return r.team === 'traveler'; });
-    var fab = b.roles.filter(function (r) { return r.team === 'fabled'; });
-    if (trav.length || fab.length) {
-      h += band('travfab', (trav.length ? '旅行者（可选） · ' : '') + '传奇角色 · 说书人', trav.length + fab.length);
-      trav.forEach(function (r) { h += item(r, 'trav'); });
-      fab.forEach(function (r) { h += item(r, 'fab'); });
-    }
     return h + '</div>';
   }
 
+  /* ---------- 背面：旅行者 / 传奇角色（正面放不下，且属可选与说书人用） ---------- */
+  function poSpecial(b) {
+    var trav = b.roles.filter(function (r) { return r.team === 'traveler'; });
+    var fab = b.roles.filter(function (r) { return r.team === 'fabled'; });
+    if (!trav.length && !fab.length) return '';
+    var h = '<div class="po-bk po-sp"><b>🎒 旅行者（可选） · 传奇角色 · 说书人<span class="po-spn">' +
+      (trav.length + fab.length) + ' 名</span></b>';
+    if (trav.length) {
+      h += '<div class="po-band trav"><i></i>旅行者（可选）<span>' + trav.length + ' 名</span></div>';
+      trav.forEach(function (r) { h += poItem(r, 'trav'); });
+    }
+    if (fab.length) {
+      h += '<div class="po-band fab"><i></i>传奇角色 · 说书人<span>' + fab.length + ' 名</span></div>';
+      fab.forEach(function (r) { h += poItem(r, 'fab'); });
+    }
+    return h + '</div>';
+  }
   /* ---------- 背面：压缩版封面（标题 + 配比表） ---------- */
   function poCoverCompact(b) {
     var e = b.e;
@@ -182,7 +192,7 @@
     var pgs = [
       { c: 'po-front', h: head + poAll(b) + poNightStrip(b.roles) },
       {
-        c: 'po-back', h: poCoverCompact(b) + poRulesBlock(b) +
+        c: 'po-back', h: poCoverCompact(b) + '<div class="po-cols">' + poSpecial(b) + poRulesBlock(b) + '</div>' +
           '<div class="po-note">' + (b.cs ? '背面 · 封面 / 配比表 / 核心机制 / 专属规则 / 说书人提示' : '背面 · 封面 / 配比表 / 说书人笔记') + '</div>'
       }
     ];

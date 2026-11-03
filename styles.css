@@ -748,7 +748,16 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .po-c2 .po-comp th{padding:1px 8px 1px 4px}
 .po-c2 .po-comp td{padding:1px 8px;min-width:26px}
 /* 背面规则：完整文本但紧凑排版 */
-.po-back .po-bk{margin-top:6px;padding:6px 9px;border-radius:6px}
+/* 背面两栏：左侧旅行者/传奇，右侧机制与规则（自动平衡） */
+.po-cols{columns:2;column-gap:12px;column-fill:balance}
+.po-cols>*{break-inside:avoid;page-break-inside:avoid}
+.po-sp{margin-top:0}
+.po-sp>b{display:flex;align-items:center;gap:6px}
+.po-spn{margin-left:auto;font-size:9.5px;font-weight:600;opacity:.65}
+.po-sp .po-item{break-inside:avoid;page-break-inside:avoid;margin-bottom:2px}
+.po-sp .po-band{margin-top:5px}
+.po-back .po-bk{margin-top:5px}
+.po-back .po-bk{margin-top:5px;padding:6px 9px;border-radius:6px}
 .po-back .po-bk>b{font-size:11px}
 .po-back .po-bkr{margin-top:4px}
 .po-back .po-bkr i{font-size:10px}
