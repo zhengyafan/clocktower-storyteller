@@ -77,11 +77,16 @@ window.BOTCAbility = (function () {
 
       var used = {};
       c.seats.forEach(function (s) { if (s.role) used[s.role] = 1; });
+      /* 自制板子：伪装牌从板子角色池里取；官方剧本：从同剧本角色里取 */
+      var edRec = null;
+      (window.BOTC_DATA.editions || []).forEach(function (e) { if (e.id === G.edition) edRec = e; });
+      var csIds = (edRec && edRec.custom && edRec.roleIds) ? edRec.roleIds : null;
       var pool = [];
       Object.keys(c.byId).forEach(function (k) {
         var r = c.byId[k]; if (!r) return;
         if (r.team !== 'townsfolk' && r.team !== 'outsider') return;
-        if (G.edition && r.edition && r.edition !== G.edition) return;
+        if (csIds) { if (csIds.indexOf(r.id) < 0) return; }
+        else if (G.edition && r.edition && r.edition !== G.edition) return;
         if (used[r.id]) return;
         pool.push(r);
       });
@@ -865,12 +870,268 @@ window.BOTCAbility = (function () {
     }
   });
 
+  /* =========================================================
+   *  自制板子常用角色的补充实现
+   * ========================================================= */
+  def('bounty_hunter', {
+    targets: 0,
+    hint: '在你的首个夜晚，你会得知一名邪恶玩家。每当你得知的玩家死亡，你会在当晚得知另一名邪恶玩家。',
+    calc: function (c) {
+      var evils = c.seats.filter(function (s) { return c.evil(s) && s.n !== c.self.n; });
+      if (!evils.length) return { info: '—', detail: '场上没有其他邪恶玩家' };
+      var t = c.pick(evils), r = c.role(t);
+      return {
+        info: c.nm(t) + (r ? '（' + r.name + '）' : ''),
+        detail: '赏金猎人得知的目标 = ' + c.nm(t) + '（' + (r ? r.name : '?') + '）。\n该目标死亡后，当晚要重新抽取一名新的邪恶玩家告知他。',
+        say: '指向 ' + t.n + '号：这是一名邪恶玩家',
+        warn: '⚠ 目标死亡后，请在当晚再执行一次本能力抽新目标。',
+        reroll: true
+      };
+    }
+  });
+  def('savant', {
+    targets: 0,
+    hint: '每个白天，你可以私下询问说书人以得知两条信息：一个是正确的，一个是错误的。',
+    calc: function (c) {
+      var others = c.seats.filter(function (s) { return s.n !== c.self.n; });
+      if (others.length < 2) return { info: '—', detail: '玩家太少，无法生成' };
+      var two = c.shuffle(others).slice(0, 2);
+      function stmt(s, truth) {
+        var evil = c.evil(s);
+        var word = truth ? (evil ? '邪恶' : '善良') : (evil ? '善良' : '邪恶');
+        return s.n + '号是' + word;
+      }
+      var firstTrue = Math.random() < 0.5;
+      var a = stmt(two[0], firstTrue), b = stmt(two[1], !firstTrue);
+      return {
+        info: a + '（' + (firstTrue ? '真' : '假') + '）　｜　' + b + '（' + (firstTrue ? '假' : '真') + '）',
+        detail: '参考两条信息（一真一假，措辞与顺序可自行调整）：\n① ' + a + '　→　' + (firstTrue ? '真实' : '虚假') +
+          '\n② ' + b + '　→　' + (firstTrue ? '虚假' : '真实') +
+          '\n建议：信息要围绕"谁是恶魔／谁是邪恶"这类有价值的问题，别给废话；两条都要看起来同等可信。',
+        say: '私下向博学者展示两条信息（不说明哪条是假的）',
+        reroll: true
+      };
+    }
+  });
+  def('juggler', {
+    targets: 0,
+    hint: '在你的首个白天，你可以公开猜测任意玩家的角色最多五次。在当晚，你会得知猜测正确的数量。',
+    calc: function (c) {
+      return {
+        info: c.day > 1 ? '已过期' : '公开猜测（最多 5 次）',
+        detail: '杂耍艺人在首个白天公开猜测（例如「3号是共情者」），最多 5 次。\n说书人记录每条猜测，当晚告知"猜对了 N 条"。\n※ 可用下方按钮把玩家说出的猜测逐条记进日志，夜里核对时一目了然。',
+        say: '当晚展示数字手势：猜对 N 条',
+        warn: c.day > 1 ? '杂耍艺人只能在首个白天猜测，今夜不再发动。' : '',
+        actions: [{
+          label: '📝 记录一条猜测', run: function () {
+            var v = prompt('记录公开猜测（格式如：3号=共情者）');
+            if (v) c.log('杂耍艺人公开猜测：' + v, 'day');
+          }
+        }]
+      };
+    }
+  });
+  def('mastermind', {
+    targets: 0,
+    hint: '如果恶魔因为死于处决而因此导致游戏结束时，再额外进行一个夜晚和一个白天。在那个白天之后，如果恶魔存活，邪恶阵营获胜。',
+    calc: function (c) {
+      return {
+        info: '待触发',
+        detail: '触发条件：恶魔在白天被处决，且这次处决会导致游戏结束。\n触发后：额外进行一个夜晚和一个白天；那个白天结束后若恶魔仍存活，邪恶阵营获胜。',
+        warn: '⚠ 主谋在场时，"处决恶魔"不等于立即获胜——必须走完额外的一夜一天再宣布结果。'
+      };
+    }
+  });
+  def('artist', {
+    targets: 0,
+    hint: '每局限一次，在白天时，你可以私下询问说书人一个是非问题，你会得知该问题的答案。',
+    calc: function (c) {
+      return {
+        info: '—', detail: '艺术家私下提出一个"是／否"问题，说书人必须如实回答（艺术家中毒或醉酒时可给错误答案）。',
+        say: '如实回答 是 / 否',
+        actions: [{
+          label: '📝 记录提问', run: function () {
+            var v = prompt('记录艺术家的问题：');
+            if (v) c.log('艺术家提问：' + v, 'day');
+          }
+        }]
+      };
+    }
+  });
+  def('gossip', {
+    targets: 0,
+    hint: '每个白天，你可以公开发表一个声明。如果该声明正确，在当晚有一名玩家死亡。',
+    calc: function (c) {
+      return {
+        info: '—',
+        detail: '造谣者公开发表一个声明（例如"我们之中有间谍"）。若声明为真 → 当晚额外有一名玩家死亡（由说书人选择）。',
+        warn: '声明是否"正确"由说书人判定；一旦判定为真，当晚必须有一名玩家死亡。',
+        actions: [{
+          label: '📝 记录声明', run: function () {
+            var v = prompt('记录造谣者的公开声明：');
+            if (v) c.log('造谣者声明：' + v, 'day');
+          }
+        }]
+      };
+    }
+  });
+  def('fisherman', {
+    targets: 0,
+    hint: '每局限一次，在白天时，你可以让说书人给你一些能帮助你的阵营获胜的建议。',
+    calc: function (c) {
+      var evils = c.seats.filter(function (s) { return c.evil(s); });
+      var t = evils.length ? c.pick(evils) : null;
+      return {
+        info: t ? '可提示方向：' + c.nm(t) : '—',
+        detail: '说书人给出一条"能帮助渔夫阵营获胜"的建议（不必直接点名，但必须有价值）。\n参考：可暗示 ' + (t ? c.nm(t) + ' 值得重点关注' : '任意方向') + '。',
+        say: '私下给出建议', reroll: true
+      };
+    }
+  });
+  def('ogre', {
+    targets: 1,
+    hint: '在你的首个夜晚，你要选择除你以外的一名玩家：你转变为他的阵营，即使你已醉酒或中毒。',
+    calc: function (c, t) {
+      if (!t) return { info: '—', detail: '选择一名玩家' };
+      var evil = c.evil(t);
+      return {
+        info: evil ? '转为邪恶' : '转为善良',
+        detail: '食人魔选择 ' + c.nm(t) + '（' + (evil ? '邪恶' : '善良') + '）→ 食人魔转变为该阵营。',
+        say: '首夜告知食人魔他的新阵营'
+      };
+    }
+  });
+  def('politician', {
+    targets: 0,
+    hint: '如果你是对你的阵营落败负最大责任的人，你转变阵营并获胜，即使你已死亡。',
+    calc: function (c) {
+      return {
+        info: '终局判定',
+        detail: '终局时由说书人判定：谁对本方落败"负最大责任"。若是政客 → 他转变阵营并获胜（即使已死亡）。',
+        warn: '这是说书人的主观判定，建议开局前就想好口径，避免终局争议。'
+      };
+    }
+  });
+  def('heretic', {
+    targets: 0,
+    hint: '对调胜负结果，即使你已死亡。',
+    calc: function (c) {
+      return {
+        info: '胜负对调',
+        detail: '只要异端分子在本局出现过（不论死活），最终胜负结果对调：善良获胜→邪恶获胜，反之亦然。',
+        warn: '⚠ 宣布结果前务必确认异端分子是否在本局角色中。'
+      };
+    }
+  });
+  def('zealot', {
+    targets: 0,
+    hint: '如果有大于等于五名玩家存活，你必须在所有提名中投票。',
+    calc: function (c) {
+      var al = c.alive().length;
+      return {
+        info: al >= 5 ? '强制投票' : '自由投票',
+        detail: '当前存活 ' + al + ' 人：' + (al >= 5 ? '狂热者必须在每一次提名中投票（不能弃权）' : '存活不足 5 人，不再强制')
+      };
+    }
+  });
+  def('mezepheles', {
+    targets: 0,
+    hint: '在你的首个夜晚，你会得知一个关键词。首个说出该关键词的善良玩家会在当晚转变为邪恶。',
+    calc: function (c) {
+      var words = ['但是', '真的吗', '我觉得', '没错', '等等', '为什么', '好吧', '其实', '那么', '当然', '不好意思', '说真的'];
+      var w = c.pick(words);
+      return {
+        info: w,
+        detail: '给灵言师一个关键词（务必选一个日常很容易脱口而出的词）。\n首个说出该词的善良玩家，在当晚转变为邪恶（通常变为爪牙）。',
+        say: '私下告知灵言师关键词：' + w,
+        reroll: true,
+        actions: [{
+          label: '📝 记录关键词', run: function () {
+            var v = prompt('记录本局关键词：', w);
+            if (v) c.log('灵言师关键词：' + v, 'night');
+          }
+        }]
+      };
+    }
+  });
+  def('harpy', {
+    targets: 2,
+    hint: '每个夜晚，你要选择两名玩家：明天第一名玩家需要「疯狂」地证明第二名玩家是邪恶的，且如果第一名玩家被处决，第二名玩家死亡。',
+    calc: function (c, t1, t2) {
+      if (!t1 || !t2) return { info: '—', detail: '选择两名玩家' };
+      if (t1 === t2) return { info: '—', detail: '请选择两名不同的玩家' };
+      return {
+        info: c.nm(t1) + ' → ' + c.nm(t2),
+        detail: '明天 ' + c.nm(t1) + ' 必须"疯狂"证明 ' + c.nm(t2) + ' 是邪恶；若 ' + t1.n + '号被处决，' + t2.n + '号死亡。',
+        say: '分别唤醒两人告知（第二个人只知道自己被盯上）'
+      };
+    }
+  });
+  def('lil_monsta', {
+    targets: 1,
+    hint: '每个夜晚，所有爪牙要秘密决定由哪名玩家来照看小怪宝并且"是恶魔"。每个夜晚，可以选择一名玩家：他死亡。',
+    calc: function (c, t) {
+      var ms = c.team('minion');
+      return {
+        info: t ? c.nm(t) : (ms.length ? '持有者待定（爪牙 ' + ms.map(function (s) { return s.n + '号'; }).join('、') + '）' : '—'),
+        detail: '① 先让所有爪牙秘密决定"今晚谁照看小怪宝＝谁是恶魔"，记录持有者；' +
+          (t ? '\n② 再选择 ' + c.nm(t) + ' 死亡。' : '\n② 再选择一名玩家杀死。'),
+        say: '爪牙秘密决定持有者后再执行杀人',
+        warn: '⚠ 小怪宝的"恶魔"是某名爪牙，杀死持有者会触发正常的恶魔死亡结算。',
+        actions: t ? [{
+          label: '杀死', run: function () {
+            t.alive = false; t.deadDay = c.G.day; c.log(c.nm(t) + ' 死亡（小怪宝）');
+          }
+        }] : []
+      };
+    }
+  });
+  def('pacifist', {
+    targets: 0,
+    hint: '被处决的善良玩家可能不会死亡。',
+    calc: function (c) {
+      return {
+        info: '由说书人决定',
+        detail: '若有善良玩家被处决，说书人可以选择让他不死。建议整局保持同一口径（要么都救，要么都不救）。',
+        warn: '邪恶玩家被处决照常死亡，和平主义者保护不了他们。'
+      };
+    }
+  });
+  def('klutz', {
+    targets: 1,
+    hint: '当你得知你死亡时，你要公开选择一名存活的玩家：如果他是邪恶的，你的阵营落败。',
+    calc: function (c, t) {
+      if (c.self.alive) return { info: '—', detail: '呆瓜仍存活，不发动' };
+      if (!t) return { info: '—', detail: '呆瓜死亡时，公开选择一名存活玩家' };
+      var evil = c.evil(t);
+      return {
+        info: evil ? '选中邪恶' : '选中善良',
+        detail: '呆瓜选择 ' + c.nm(t) + '（' + (evil ? '邪恶' : '善良') + '）→ ' +
+          (evil ? '呆瓜的阵营落败，邪恶阵营获胜' : '无事发生'),
+        say: '公开宣布被选者阵营与结果',
+        warn: evil ? '⚠ 呆瓜选中邪恶玩家 → 善良阵营立即落败！' : ''
+      };
+    }
+  });
+  def('mutant', {
+    targets: 0,
+    hint: '如果你「疯狂」地证明自己是外来者，你可能被处决。',
+    calc: function (c) {
+      return {
+        info: '说书人裁定',
+        detail: '若畸形秀演员在白天"疯狂"证明自己是外来者，说书人可以直接宣判处决他。',
+        warn: '处决畸形秀演员不需要投票，也不占用当天的处决名额。'
+      };
+    }
+  });
+
   /* ---------- 对外接口 ---------- */
   /* 白天 / 即时发动的能力（在白天页单独列出） */
   ['slayer', 'virgin', 'gunslinger', 'mayor', 'saint', 'recluse', 'soldier', 'fool',
     'tea_lady', 'goon', 'tinker', 'baron', 'drunk', 'moonchild', 'evil_twin', 'witch',
     'cerenovus', 'professor', 'assassin', 'pacifist', 'minstrel', 'klutz', 'mutant',
-    'beggar', 'scapegoat', 'judge', 'bishop', 'voudon', 'matron', 'philosopher'
+    'beggar', 'scapegoat', 'judge', 'bishop', 'voudon', 'matron', 'philosopher',
+    'savant', 'artist', 'gossip', 'fisherman', 'juggler', 'zealot', 'politician'
   ].forEach(function (id) { if (A[id]) A[id].when = 'day'; });
 
   return {

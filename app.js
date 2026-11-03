@@ -190,6 +190,12 @@
       $('#q').blur();
       return;
     }
+    if ((r.p === 'scripts' || r.p === 'script') && window.BOTCScripts) {
+      window.BOTCScripts.route(r);
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'scripts'); });
+      $('#q').blur();
+      return;
+    }
     if (r.p === 'qa' && window.BOTCQA) {
       window.BOTCQA.route(r);
       $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'qa'); });
@@ -250,11 +256,19 @@
       '<div class="qbtns" style="margin-top:12px">' +
       '<a class="btn primary" href="#/qa">❓ 有问题？直接问（含情境推演）</a>' +
       '<a class="btn" href="#/game/new">🕯️ 开一局（玩家自己抽角色）</a>' +
+      '<a class="btn" href="#/scripts">🧪 自制板子（原创剧本）</a>' +
       '<a class="btn" href="#/share">📤 分享给朋友 / 玩家</a>' +
       '</div></div>' +
 
+      '<div class="sec-title"><h2>🧪 自制板子</h2><span class="more"><a href="#/scripts">全部 →</a></span></div>' +
+      '<div class="grid2">' + D.editions.filter(function (e) { return e.custom; }).map(function (e) {
+        var c = e.counts || {};
+        return '<div class="tile" data-go="#/script/' + e.id + '"><div class="em">🎲</div><div class="t">' + esc(e.name) + '</div>' +
+          '<div class="d">' + esc(e.playerNum || '') + ' · ' + ((e.roleIds || []).length) + ' 角色 · 可开局</div></div>';
+      }).join('') + '</div>' +
+
       '<div class="sec-title"><h2>剧本 / 角色合集</h2></div>' +
-      '<div class="grid2">' + D.editions.map(function (e) {
+      '<div class="grid2">' + D.editions.filter(function (e) { return !e.custom; }).map(function (e) {
         var c = e.counts || {};
         return '<div class="tile" data-ed="' + e.id + '"><div class="em">📖</div><div class="t">' + esc(e.name) + '</div>' +
           '<div class="d">' + esc(e.playerNum || '') + ' · 镇民' + (c.townsfolk || 0) + ' 外来' + (c.outsider || 0) +

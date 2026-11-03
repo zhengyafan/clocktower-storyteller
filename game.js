@@ -57,10 +57,26 @@
         if (JX[list[i].name + '|' + list[j].name]) return true;
     return false;
   }
+  /* 剧本对象 / 角色池（支持自制板子：板子用 roleIds 指定池） */
+  function edObj(id) {
+    for (var i = 0; i < D.editions.length; i++) if (D.editions[i].id === id) return D.editions[i];
+    return null;
+  }
+  function poolFor(ed, team) {
+    var e = edObj(ed), list;
+    if (e && e.custom && e.roleIds) {
+      list = e.roleIds.map(function (id) { return byId[id]; }).filter(Boolean);
+    } else {
+      list = D.roles.filter(function (r) { return r.edition === ed; });
+    }
+    if (team) list = list.filter(function (r) { return r.team === team; });
+    return list;
+  }
+
   function deal(ed, n) {
     var idx = Math.min(Math.max(n - 5, 0), D.composition.length - 1);
     var comp = D.composition[idx];
-    var pool = D.roles.filter(function (r) { return r.edition === ed; });
+    var pool = poolFor(ed);
     var need = { townsfolk: comp.townsfolk, outsider: comp.outsider, minion: comp.minion, demon: comp.demon };
     var picked = null;
     for (var tryN = 0; tryN < 60; tryN++) {
@@ -95,13 +111,40 @@
   }
 
   /* ================= 新建对局 ================= */
+  /* 自制板子的提示条 */
+  function scriptTipHtml(ed) {
+    var e = edObj(ed);
+    if (!e || !e.custom) return '';
+    return '<div class="sctip"><div><b>🧪 自制板子《' + esc(e.name) + '》</b>' +
+      '<a href="#/script/' + e.id + '" style="margin-left:6px">查看主题 / 专属规则 / 说书人要点 →</a></div>' +
+      '<div class="sctip-d">开局前请向所有玩家宣读该板子的专属规则。</div></div>';
+  }
+
+  /* 从自制板子页跳转过来时的一次性预置配置 */
+  function presetNew() {
+    try {
+      var v = localStorage.getItem('botcg_newcfg');
+      if (v) { localStorage.removeItem('botcg_newcfg'); return JSON.parse(v); }
+    } catch (e) { }
+    return null;
+  }
+
   function renderNew() {
-    var cfg = UI.newCfg || (UI.newCfg = { ed: 'tb', n: 9, names: [], fabled: [], travelers: [], roles: null });
+    if (!UI.newCfg) {
+      UI.newCfg = { ed: 'tb', n: 9, names: [], fabled: [], travelers: [], roles: null };
+      var ps = presetNew();
+      if (ps) {
+        if (ps.ed) UI.newCfg.ed = ps.ed;
+        if (ps.n) UI.newCfg.n = ps.n;
+        if (ps.roles && ps.roles.length) { UI.newCfg.roles = ps.roles; UI.newCfg.n = ps.roles.length; }
+      }
+    }
+    var cfg = UI.newCfg;
     if (!cfg.names.length) for (var i = 1; i <= 15; i++) cfg.names[i - 1] = '玩家' + i;
 
     var edOpts = D.editions.filter(function (e) { return e.id !== 'ngj' && e.id !== 'luf'; });
     var fabled = D.fabled;
-    var pool = D.roles.filter(function (r) { return r.edition === cfg.ed && r.team === 'traveler'; });
+    var pool = poolFor(cfg.ed, 'traveler');
 
     var html = '<div class="backbar"><button data-gback="1">‹ 返回</button>' +
       (G ? '<span style="font-size:12px;color:var(--text-faint)">已有进行中的对局，新建会覆盖</span>' : '') + '</div>';
@@ -109,7 +152,7 @@
     html += '<div class="card" style="padding:14px">' +
       '<div class="ftl">1. 选择剧本</div><div class="chips">' +
       edOpts.map(function (e) { return '<button class="chip' + (cfg.ed === e.id ? ' on' : '') + '" data-ged="' + e.id + '">' + esc(e.name) + '</button>'; }).join('') +
-      '</div>' +
+      '</div>' + scriptTipHtml(cfg.ed) +
       '<div class="ftl">2. 玩家人数（不含旅行者）</div><div class="chips">' +
       [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(function (n) {
         return '<button class="chip' + (cfg.n === n ? ' on p' : '') + '" data-gn="' + n + '">' + n + '</button>';
@@ -489,7 +532,8 @@
   function swapSheet(n) {
     var s = seat(n); var r = roleOf(s);
     var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'seatov';
-    var pool = D.roles.filter(function (x) { return !r || x.team === r.team || x.edition === G.edition; });
+    var cur = poolFor(G.edition);
+    var pool = D.roles.filter(function (x) { return !r || x.team === r.team || cur.indexOf(x) >= 0; });
     ov.innerHTML = '<div class="sheet"><div class="sh"><div><b>更换 ' + n + '号 的角色</b><div class="sub">当前：' + (r ? esc(r.name) : '—') + '</div></div><button class="x" data-gclose="1">✕</button></div>' +
       '<div class="sb"><input id="swq" placeholder="搜索角色名" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;outline:none">' +
       '<div id="swlist" style="max-height:52vh;overflow:auto;margin-top:8px">' + swapList(pool, s) + '</div></div></div>';
@@ -807,6 +851,17 @@
     var html = '<div class="backbar"><button data-gback2="1">‹ 魔典</button><span style="font-size:12px;color:var(--text-faint)">第 ' + G.day + ' 天 · 白天（存活 ' + al.length + ' 人，处决需 ' + need + ' 票）</span></div>';
 
     html += pendingEndHtml();
+
+    /* 自制板子专属规则（回响读数 / 沙漏限时） */
+    var edE = edObj(G.edition);
+    if (edE && edE.custom && (edE.echo || edE.timer)) {
+      var bad = G.seats.filter(function (s) { return s.st && (s.st.poison || s.st.drunk); }).length;
+      html += '<div class="card echobox"><div class="ftl">🧪 板子规则 · ' + esc(edE.name) + '</div>';
+      if (edE.echo) html += '<div class="echonum">🔔 昨夜有 <b>' + bad + '</b> 名玩家的能力未正常生效（中毒 / 醉酒）</div>' +
+        '<div class="note">按「回响」规则公开宣布这个数字，不点名。</div>';
+      if (edE.timer) html += '<div class="note">⏳ 沙漏：本板子讨论限时 ' + Math.round(edE.timer / 60) + ' 分钟，时间到立即进入提名（可用下方计时器）。</div>';
+      html += '</div>';
+    }
 
     html += '<div class="card" style="padding:12px 14px"><div class="ftl">讨论计时</div>' +
       '<div class="chips">' + [1, 2, 3, 5, 10].map(function (m) {
@@ -1249,7 +1304,7 @@
   function swapNew(i) {
     var cfg = UI.newCfg;
     var cur = byId[cfg.roles[i]];
-    var pool = D.roles.filter(function (r) { return r.edition === cfg.ed && r.team === cur.team && r.id !== cur.id; });
+    var pool = poolFor(cfg.ed, cur.team).filter(function (r) { return r.id !== cur.id; });
     var names = pool.map(function (r, k) { return (k + 1) + '. ' + r.name; }).join('\n');
     var v = prompt('将 ' + (i + 1) + '号 的「' + cur.name + '」换成：\n' + names + '\n\n输入序号：');
     var k = parseInt(v, 10) - 1;
