@@ -88,7 +88,13 @@
 /* 离线缓存：注册 Service Worker（失败忽略，不影响使用） */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').catch(function () { });
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      /* 每次打开都主动检查一次新版本，发现即安装并刷新（避免一直用旧缓存） */
+      try { reg.update(); } catch (e) { }
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) { try { reg.update(); } catch (e) { } }
+      });
+    }).catch(function () { });
     /* 新版 SW 激活后自动刷新一次，避免一直用旧缓存（防抖：30s 内不重复刷新） */
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       var last = +(sessionStorage.getItem('botc_sw_reload') || 0);
@@ -96,6 +102,18 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
       sessionStorage.setItem('botc_sw_reload', String(Date.now()));
       location.reload();
     });
+    /* 版本自检：index.html 总是 network-first（最新），若加载到的 JS 是旧版则强制刷一次 */
+    setTimeout(function () {
+      try {
+        var WANT = '20261103-2';
+        var got = (window.BOTCScripts && BOTCScripts.build) ? BOTCScripts.build : '';
+        if (got === WANT) return;
+        var k = 'botc_reload_' + WANT;
+        if (sessionStorage.getItem(k)) return;
+        sessionStorage.setItem(k, '1');
+        location.replace(location.pathname + '?v=' + WANT + (location.hash || ''));
+      } catch (e) { }
+    }, 1200);
   });
 }
 </script>

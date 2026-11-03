@@ -4,7 +4,7 @@
  *  静态资源：stale-while-revalidate（秒开 + 后台静默更新）
  *  大文件 wiki.js（百科全文）运行时按需缓存
  * ============================================================ */
-var VER = 'botc-v20261103-3';
+var VER = 'botc-v20261103-4';
 var CORE = [
   './', 'index.html', 'styles.css', 'manifest.json',
   'core.js', 'qrcode.js', 'qr.js', 'scripts.js', 'custom_roles.js', 'sheet.js', 'ability.js', 'game.js',
@@ -51,7 +51,23 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  /* 静态资源：先用缓存，同时后台更新 */
+  /* 代码文件（js/css/json）：网络优先 —— 保证每次打开都是最新版，断网时回退缓存 */
+  if (/\.(js|css|json)$/.test(url.pathname)) {
+    e.respondWith(
+      fetch(req).then(function (res) {
+        if (res && res.status === 200) {
+          var cp = res.clone();
+          caches.open(VER).then(function (c) { c.put(req, cp); });
+        }
+        return res;
+      }).catch(function () {
+        return caches.match(req).then(function (r) { return r || caches.match(url.pathname.replace(/^\//, '')); });
+      })
+    );
+    return;
+  }
+
+  /* 其他静态资源（图片等）：先用缓存，同时后台更新 */
   e.respondWith(
     caches.match(req).then(function (hit) {
       var net = fetch(req).then(function (res) {

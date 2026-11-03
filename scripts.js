@@ -575,6 +575,7 @@
    *  对外
    * ============================================================ */
   window.BOTCScripts = {
+    build: '20261103-2',      /* 版本自检用：新增板子/功能时同步改 index.html 里的 WANT */
     list: SCRIPTS,
     get: get,
     pickRoles: pickRoles,
