@@ -1138,6 +1138,7 @@ window.BOTCAbility = (function () {
     buildCtx: buildCtx,
     has: function (id) { return !!A[id]; },
     get: function (id) { return A[id]; },
-    ids: function () { return Object.keys(A); }
+    ids: function () { return Object.keys(A); },
+    def: def            /* 供自制角色模块注册能力助手 */
   };
 })();

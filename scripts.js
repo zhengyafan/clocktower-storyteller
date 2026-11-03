@@ -174,6 +174,93 @@
         '善良胜率过高：保留涡流，加入刺客；邪恶胜率过高：移除刺客，加入猎手。',
         '7 人局：建议移除圣徒（小局里圣徒被处决直接落败，运气成分太重）。'
       ]
+    },
+
+    {
+      id: 'cs_heart', em: '💞', name: '心动不如行动 V9 · 沉沦与救赎', tag: '你以为的队友，可能下一秒就不是了',
+      players: '8-15人', best: '10-13人', n0: 11, level: '自制 · ★★★★★',
+      style: '阵营流动 · 沉沦救赎 · 高互动', hot: 1, customRoles: 1,
+      intro: '这是在你 V8 自制板子基础上重做的一版：保留了「沉沦 / 心动连结 / 第三方阵营」三大原创机制的味道，把说书人无法判定、玩家容易吵架的地方全部改成客观规则，并新增 6 个角色把玩法闭环补上——善良方第一次有了「救赎」的手段，邪恶方第一次有了「连环沉沦」的钥匙。',
+      mech: [
+        {
+          t: '⛓ 沉沦（本板子核心）',
+          d: '转变阵营为邪恶，保留原有角色与能力。\n· 本人会得知自己已沉沦；\n· 沉沦者不与恶魔、爪牙互认（恶魔不知道谁被沉沦了）；\n· 沉沦者计入邪恶玩家人数（影响胜利判定）；\n· 永久生效，不可逆转——守心人免疫，回心人可以解除一次。'
+        },
+        {
+          t: '💞 心动连结',
+          d: '由月老 / 备胎 / 月老神产生。\n· 连结双方互相得知对方的阵营（不是角色）；\n· 连结中任意一人死亡 → 另一人立刻沉沦；\n· 红线人可以切断连结：切断后双方互知真实角色，且该连结不再触发沉沦。'
+        },
+        {
+          t: '🎭 第三方阵营',
+          d: '由心动嘉宾产生（恶魔 + 心动嘉宾）。\n· 第三方胜利：场上恰好剩下他们两人且都存活；\n· 嘉宾死亡 → 恶魔回归邪恶阵营；\n· 第三方产生时，说书人公开宣布「本局出现了第三方阵营」，但不说是谁。'
+        }
+      ],
+      fixes: [
+        '【主观 → 客观】宠儿的「最不被怀疑」改为「当天未被提名且未投票」；造谣者的「造谣成功」改为「陈述是真还是假」；判官的「公开审判信息」改为「提问—测谎」。',
+        '【补漏洞】犟种中和成功时说书人必须告知「你今夜格外清醒」；双面人补上不互认／无能力／死亡才公开；恶魔宝宝补上养成时点（第三夜）与知情规则；心动嘉宾补上「嘉宾死亡则回归邪恶」。',
+        '【消歧义】占星师明确由玩家指定谁免疫、谁醉酒且不能选自己；叩门者明确双向互换与异常即错误信息；守心人明确「告知是谁」与免疫范围；邪恶鼠鼠从「可能毒 3-4 人」改为只毒 1 人。',
+        '【删不可执行】愚者的「你不知道场上发生了什么」改为官方口径的假身份 + 死后永久醉酒；放肆猫猫删除「首夜杀外来者额外 +1 外来者」（破坏人数配比，实操无法执行）。',
+        '【数值封顶】审判限 2 次且得知恶魔则中毒；叩门者限 2 次；迷途行者限 3 次；疯批每局最多造成 2 次沉沦；预言家猜错自己去死。',
+        '【新增 6 个角色】回心人（救赎沉沦者）、倾听者（善良方信息锚点）、备胎（外来者版连结）、第三者（爪牙的连环沉沦钥匙）、情圣（把杀人和沉沦绑定）、月老神（保证每局都有连结）。',
+        '【新增 3 条自制规则】沉沦次数上限、连结对数公开、沉沦者死亡时公开阵营——专治 V8 邪恶滚雪球。'
+      ],
+      why: [
+        '① 阵营真的会流动：沉沦、连结、第三方三条线让「谁是哪一边的」随时可能刷新，任何铁逻辑都可能在夜里失效。',
+        '② 善良方第一次有救赎手段：回心人可以把沉沦者拉回来，代价是可能把自己搭进去——白天公开点名本身就是一次豪赌。',
+        '③ 邪恶方有连环操作的快感：第三者摸清连结网后一次性「挖人」，可以让两个人同时沉沦；情圣让每一次击杀都可能改变阵营。',
+        '④ 每个人都在参与：连结、备胎、沉沦都是「我可能随时变坏」的紧张感，全场没有真正的旁观者。',
+        '⑤ 保留了你原版的灵魂：所有角色名、主题、沉沦与心动的味道都还在，只是把规则说清楚了。'
+      ],
+      cp: [
+        '沉沦的恐惧：你不知道谁已经被沉沦了，也不知道自己什么时候会变——恶魔同样不知道。',
+        '连结的双刃：互知阵营是强信息，但对方一死你就变邪恶，所以「保住连结对象」成了真实的战术目标。',
+        '公开豪赌：预言家、回心人、判官都要在白天公开点名，点错了代价惨重。',
+        '第三方搅局：心动嘉宾一出现，胜负条件就多了一条，所有人都要重新算人数。'
+      ],
+      rules: [
+        {
+          t: '⛓ 沉沦上限（重要平衡阀）',
+          d: '本局沉沦总次数上限 = 向上取整（在场玩家数 ÷ 4）（例如 11 人局 = 3 次）。\n达到上限后不再触发新的沉沦，说书人应在每次沉沦后公开已用次数（如「沉沦 2/3」）。\n※ 这是防止 V8「邪恶滚雪球」最关键的一条，强烈建议启用。'
+        },
+        {
+          t: '💞 连结对数公开',
+          d: '首夜结束后，说书人公开宣布：「本局存在 N 对心动连结。」（不点名）\n让连结成为公共推理线索，红线人、第三者、备胎也因此有了用武之地。'
+        },
+        {
+          t: '⚰️ 沉沦者死亡时公开阵营',
+          d: '沉沦玩家死亡（无论被处决还是被杀）时，说书人公开宣布其真实阵营。\n否则善良方永远算不清场上还有几个邪恶，人数推理会彻底失效。'
+        },
+        {
+          t: '🎭 第三方阵营公告',
+          d: '第三方阵营产生时，说书人公开宣布「本局出现了第三方阵营」，但不说明是谁。\n若嘉宾死亡，同样公开宣布「第三方阵营已解散」。'
+        }
+      ],
+      townsfolk: ['hr_darling', 'hr_strayer', 'hr_heartpick', 'hr_trial', 'hr_gossiper', 'hr_angel',
+        'hr_knocker', 'hr_astrologer', 'hr_matchmaker', 'hr_magistrate', 'hr_redline', 'hr_guardian',
+        'hr_prophet', 'hr_returns', 'hr_listener'],
+      outsider: ['hr_heartbreak', 'hr_fool2', 'hr_stubborn', 'hr_twoface', 'hr_spare'],
+      minion: ['hr_grudge', 'hr_madman', 'hr_bulwark', 'hr_jester', 'hr_phantom', 'hr_third'],
+      demon: ['hr_baby', 'hr_rat', 'hr_cat', 'hr_guest', 'hr_twin', 'hr_lover'],
+      traveler: ['beggar', 'gunslinger', 'thief', 'barista', 'gnome'],
+      fabled: ['hr_steve', 'hr_master12', 'hr_cupid'],
+      tips: [
+        '开局前必须宣读三条定义：沉沦、心动连结、第三方阵营。这是整个板子的地基，说不清楚后面全是争议。',
+        '沉沦不互认是核心设定：恶魔不知道谁被沉沦了，沉沦者也不知道谁是恶魔。请不要好心补充信息。',
+        '犟种中和成功时必须明确告诉他「你今夜格外清醒」，否则这个角色等于白板。',
+        '双面人的阵营要记在魔典上：若他为邪恶，不要让他参与首夜互认；他死亡时公开真实阵营。',
+        '恶魔宝宝：首夜选的角色若不在场，就没有宝宝（提前在魔典上记好）；宝宝接任恶魔后游戏正常继续。',
+        '小丑接任恶魔需满足「存活邪恶玩家 ≥ 2」，接任当夜与存活爪牙互认一次。',
+        '每次沉沦后记得公开「沉沦 N/上限」，并在魔典上标记该玩家（阵营变了但角色不变）。',
+        '建议第一次玩用 10-12 人，并启用沉沦上限；熟手局再考虑放宽。'
+      ],
+      balance: [
+        '新手较多：移除第三者与悍卫（沉沦连锁对新手太苦），恶魔只用邪恶鼠鼠／放肆猫猫／双生花。',
+        '邪恶连胜：沉沦上限收紧到 向上取整（人数 ÷ 6），并把疯批换成魅影。',
+        '善良连胜：加入情圣与第三者，沉沦上限放宽到 向上取整（人数 ÷ 3）。',
+        '8 人及以下：去掉心动嘉宾与恶魔宝宝——小局里第三方阵营几乎必胜。',
+        '如果出现「全场连环沉沦」的雪球：立刻启用沉沦上限，并公开宣布已用次数与剩余次数。',
+        '想要更欢乐：加入月老神 + 备胎，让连结成为每局必有的变量。'
+      ]
     }
   ];
 
@@ -181,7 +268,7 @@
    *  注入到 editions，使其可在开局中直接选用
    * ============================================================ */
   function allIds(s) {
-    return s.townsfolk.concat(s.outsider, s.minion, s.demon, s.traveler || []);
+    return s.townsfolk.concat(s.outsider, s.minion, s.demon, s.traveler || [], s.fabled || []);
   }
   function install() {
     SCRIPTS.forEach(function (s) {
@@ -259,10 +346,14 @@
     if (r.otherNight) np.push('其他夜 ' + nightPosOf(r, 'other'));
     if (!np.length) np.push('夜晚不行动（白天或被动）');
     var jn = D.jinxes.filter(function (j) { return j.aid === r.id || j.bid === r.id; }).length;
+    var cr = (window.BOTCCustom && BOTCCustom.get) ? BOTCCustom.get(r.id) : null;
+    var fixTxt = cr ? (cr.fix || cr.why || '') : '';
     return '<a class="rcard" href="#/role/' + r.id + '">' +
       '<div class="rcnm">' + esc(r.name) + ' <span class="tag t-' + r.team + '">' + esc(r.teamCn) + '</span>' +
+      (cr && cr.isNew ? '<span class="rcnote" style="background:#1e7a3c;color:#fff;border-color:#1e7a3c">新增</span>' : '') +
       (note ? '<span class="rcnote">' + esc(note) + '</span>' : '') + '</div>' +
       '<div class="rcab">' + esc(r.ability) + '</div>' +
+      (fixTxt ? '<div class="rcfix"><b>' + (cr.isNew ? '为什么加他' : 'V8 → V9 优化了什么') + '</b>' + esc(fixTxt) + '</div>' : '') +
       '<div class="rcmeta">' + esc(r.editionCn || '') + ' · ' + np.join(' ／ ') + (jn ? ' · ⚠相克 ' + jn + ' 条' : '') + '</div>' +
       '</a>';
   }
@@ -340,6 +431,15 @@
     h += '<div class="card" style="margin-top:12px;padding:12px 14px"><div class="ftl">板子主题</div>' +
       '<div class="abox"><div style="font-size:13.5px;line-height:1.8">' + esc(s.intro) + '</div></div></div>';
 
+    /* 核心机制定义（自制板子） */
+    if (s.mech && s.mech.length) {
+      h += '<div class="sec-title"><h2>🧬 核心机制定义（开局前必读）</h2></div><div class="card">' +
+        s.mech.map(function (m) {
+          return '<div class="cite2"><div class="csrc">' + esc(m.t) + '</div>' +
+            '<div class="ctext" style="white-space:pre-line">' + esc(m.d) + '</div></div>';
+        }).join('') + '</div>';
+    }
+
     h += '<div class="card" style="margin-top:10px;padding:12px 14px"><div class="ftl">为什么好玩 / 设计思路</div>' +
       '<div class="anstep">' + s.why.map(function (x) {
         return '<div class="ansd" style="margin:6px 0">' + esc(x) + '</div>';
@@ -382,6 +482,7 @@
     h += roleRows(s, 'minion', '爪牙', 't-minion');
     h += roleRows(s, 'demon', '恶魔', 't-demon');
     h += roleRows(s, 'traveler', '旅行者（可选加入）', 't-traveler');
+    h += roleRows(s, 'fabled', '传奇角色（说书人可选）', 't-fabled');
 
     /* 相克提示 */
     h += '<div class="sec-title"><h2>⚔️ 板子内相克提醒</h2></div>' +
@@ -391,6 +492,14 @@
           '<div class="ctext">' + esc(j.reason || '官方相克规则') + '</div></div>';
       }).join('') : '<div class="note">该板子角色池内部没有官方相克记录，可自由组合。</div>') +
       '</div>';
+
+    /* V8 → V9 优化点 */
+    if (s.fixes && s.fixes.length) {
+      h += '<div class="sec-title"><h2>🔧 V8 → V9 优化了什么</h2></div>' +
+        '<div class="card" style="padding:12px 14px"><div class="anstep">' +
+        s.fixes.map(function (x) { return '<div class="ansd" style="margin:6px 0">· ' + esc(x) + '</div>'; }).join('') +
+        '</div></div>';
+    }
 
     /* 说书人指南 */
     h += '<div class="sec-title"><h2>🎙 说书人要点</h2></div>' +

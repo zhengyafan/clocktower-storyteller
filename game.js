@@ -143,7 +143,11 @@
     if (!cfg.names.length) for (var i = 1; i <= 15; i++) cfg.names[i - 1] = '玩家' + i;
 
     var edOpts = D.editions.filter(function (e) { return e.id !== 'ngj' && e.id !== 'luf'; });
-    var fabled = D.fabled;
+    /* 传奇角色：官方 + 自制板子自带的（去重） */
+    var fabled = D.fabled.slice();
+    poolFor(cfg.ed, 'fabled').forEach(function (r) {
+      if (!fabled.some(function (x) { return x.id === r.id; })) fabled.push(r);
+    });
     var pool = poolFor(cfg.ed, 'traveler');
 
     var html = '<div class="backbar"><button data-gback="1">‹ 返回</button>' +

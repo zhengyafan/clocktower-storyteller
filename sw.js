@@ -4,10 +4,10 @@
  *  静态资源：stale-while-revalidate（秒开 + 后台静默更新）
  *  大文件 wiki.js（百科全文）运行时按需缓存
  * ============================================================ */
-var VER = 'botc-v20261103-2';
+var VER = 'botc-v20261103-3';
 var CORE = [
   './', 'index.html', 'styles.css', 'manifest.json',
-  'core.js', 'qrcode.js', 'qr.js', 'scripts.js', 'sheet.js', 'ability.js', 'game.js',
+  'core.js', 'qrcode.js', 'qr.js', 'scripts.js', 'custom_roles.js', 'sheet.js', 'ability.js', 'game.js',
   'draw.js', 'analyze.js', 'ai.js', 'qa.js', 'share.js', 'app.js',
   'icon-192.png', 'icon-512.png', 'icon-180.png', 'favicon.png'
 ];
