@@ -506,3 +506,70 @@ textarea.sel{min-height:66px;font-family:inherit;line-height:1.55;resize:vertica
 .sctip b{font-size:13px;color:var(--accent)}
 .sctip .sctip-d{font-size:11.5px;color:var(--text-dim);margin-top:3px}
 .dealbox .dealc{flex:1 1 92px;min-width:92px;max-width:130px}
+
+/* ============================================================
+   板子角色一览表（海报版 #/sheet/<id>）
+   ============================================================ */
+.sh-hero{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#2b1a12,#4a2c1a);
+  border-radius:14px;padding:16px 16px;margin-top:10px;color:#f3e6c8;box-shadow:0 3px 14px rgba(0,0,0,.25)}
+.sh-hero .sh-em{font-size:38px;line-height:1}
+.sh-hero h1{margin:0;font-size:22px;letter-spacing:2px;color:#ffe9b8}
+.sh-hero .sh-hs{font-size:12px;opacity:.85;margin-top:3px}
+.sh-hero .sh-tag{font-size:12.5px;color:#ffd98a;margin-top:4px}
+.sh-comp{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;overflow-x:auto}
+.sh-comp-t,.sh-sec-t{font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:1px}
+.sh-comp table{border-collapse:collapse;width:100%;min-width:520px;font-size:12.5px;text-align:center}
+.sh-comp th{color:var(--text);font-weight:700;padding:4px 6px;white-space:nowrap;text-align:left}
+.sh-comp td{border:1px solid var(--line);padding:4px 6px;color:var(--text-dim)}
+.sh-comp td.c-good{color:#1e5aa8;font-weight:700}
+.sh-comp td.c-evil{color:#b01818;font-weight:700}
+.sh-body{display:flex;gap:10px;margin-top:12px;align-items:stretch}
+.sh-rail{flex:0 0 64px;background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:10px 6px;display:flex;flex-direction:column;gap:12px;align-self:flex-start;position:sticky;top:8px}
+.sh-nr-g{display:flex;flex-direction:column;align-items:center;gap:5px}
+.sh-nr-t{font-size:11px;font-weight:800;color:var(--accent);letter-spacing:2px}
+.sh-nr-i{display:flex;flex-direction:column;align-items:center;gap:1px}
+.sh-nr-i b{font-size:10px;color:var(--text-faint);font-weight:600}
+.sh-nr-e{font-size:11px;color:var(--text-faint)}
+.sh-nr-lg{font-size:9.5px;color:var(--text-faint);text-align:center;line-height:1.5;margin-top:auto}
+.sh-main{flex:1;min-width:0}
+.sh-sec{margin-bottom:14px}
+.sh-sec.good .sh-sec-t{color:#1e5aa8;border-bottom:2px solid #9db8dc;padding-bottom:4px}
+.sh-sec.evil .sh-sec-t{color:#b01818;border-bottom:2px solid #dca9a9;padding-bottom:4px}
+.sh-sec.trav .sh-sec-t{color:#6a3fa0;border-bottom:2px solid #c3b1e0;padding-bottom:4px}
+.sh-sec.fab .sh-sec-t{color:#7a5c14;border-bottom:2px solid #d8c48a;padding-bottom:4px}
+.sh-sec-t span{font-size:11px;font-weight:600;color:var(--text-faint);margin-left:6px}
+.sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+@media (max-width:560px){.sh-grid{grid-template-columns:1fr}}
+.sh-item{display:flex;gap:9px;align-items:flex-start;background:var(--bg-card);border:1px solid var(--line);
+  border-radius:12px;padding:9px 10px;cursor:pointer}
+.sh-item:active{transform:scale(.99)}
+.sh-icwrap{position:relative;flex:0 0 42px;width:42px;height:42px;border-radius:50%;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;background:#eee}
+.sh-icwrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+.sh-icwrap .sh-fb{font-size:17px;font-weight:800;color:#fff}
+.sh-icwrap.good{background:linear-gradient(160deg,#3a6db3,#1e5aa8)}
+.sh-icwrap.evil{background:linear-gradient(160deg,#c33a3a,#8f1414)}
+.sh-icwrap.trav{background:linear-gradient(160deg,#8a5cc0,#5c3390)}
+.sh-icwrap.fab{background:linear-gradient(160deg,#b3924a,#8a6a20)}
+.sh-b{min-width:0;flex:1}
+.sh-nm{font-size:14px;font-weight:800;color:var(--text)}
+.sh-sec.good .sh-nm{color:#1e5aa8}
+.sh-sec.evil .sh-nm{color:#b01818}
+.sh-sec.trav .sh-nm{color:#6a3fa0}
+.sh-sec.fab .sh-nm{color:#7a5c14}
+.sh-st{font-style:normal;font-size:11px;vertical-align:middle}
+.sh-ab{font-size:12px;line-height:1.65;color:var(--text-dim);margin-top:3px}
+.sh-rules{background:var(--bg-card);border:1px dashed var(--line);border-radius:14px;padding:12px;margin-top:4px}
+.sh-rule{margin:8px 0}
+.sh-rule b{font-size:13px;color:var(--text)}
+.sh-rule span{display:block;font-size:12px;line-height:1.7;color:var(--text-dim);margin-top:2px;white-space:pre-wrap}
+.sh-foot{font-size:11px;color:var(--text-faint);margin:12px 2px 20px;line-height:1.7}
+.sh-print{margin-left:auto}
+@media print{
+  .noprint,#tabbar,#topbar{display:none!important}
+  body{background:#fff}
+  .sh-hero{border-radius:0;box-shadow:none}
+  .sh-item,.sh-comp,.sh-rail,.sh-rules{break-inside:avoid}
+  .sh-rail{position:static}
+}

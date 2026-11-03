@@ -196,6 +196,11 @@
       $('#q').blur();
       return;
     }
+    if (r.p === 'sheet' && window.BOTCSheet) {
+      window.BOTCSheet.route(r);
+      $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', false); });
+      return;
+    }
     if (r.p === 'qa' && window.BOTCQA) {
       window.BOTCQA.route(r);
       $$('#tabbar a').forEach(function (a) { a.classList.toggle('on', a.dataset.p === 'qa'); });
@@ -506,7 +511,8 @@
     D.editions.forEach(function (x) { if (x.id === id) e = x; });
     if (!e) { view.innerHTML = '<div class="empty">未找到剧本</div>'; return; }
     var order = ['townsfolk', 'outsider', 'minion', 'demon', 'traveler'];
-    var html = '<div class="backbar"><button data-back="1">‹ 返回</button></div>' +
+    var html = '<div class="backbar"><button data-back="1">‹ 返回</button>' +
+      '<a class="btn" style="margin-left:auto" href="#/sheet/' + esc(e.id) + '">📋 角色一览表（海报版）</a></div>' +
       '<div class="card"><div style="padding:14px"><h1 style="margin:0 0 4px;font-size:20px">' + esc(e.name) + '</h1>' +
       '<div class="sub" style="font-size:12px;color:var(--text-faint)">' + esc(e.playerNum) + (e.level ? ' · 难度 ' + e.level : '') + '</div></div>' +
       (e.description ? '<div class="rule-html" style="padding-top:0">' + e.description + '</div>' : '') + '</div>';

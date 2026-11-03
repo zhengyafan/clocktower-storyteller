@@ -297,7 +297,8 @@
           '<div class="sct-b"><div class="sct-t">' + esc(s.name) + (s.hot ? '<span class="sct-hot">主推</span>' : '') + '</div>' +
           '<div class="sct-tag">' + esc(s.tag) + '</div>' +
           '<div class="sct-m">' + esc(s.players) + ' · 推荐 ' + esc(s.best) + ' · ' + n + ' 角色</div>' +
-          '<div class="sct-c"><span class="tag t-townsfolk">' + esc(s.style) + '</span></div>' +
+          '<div class="sct-c"><span class="tag t-townsfolk">' + esc(s.style) + '</span>' +
+          ' <a class="tag" href="#/sheet/' + s.id + '" onclick="event.stopPropagation()">📋 一览表</a></div>' +
           '</div></div>';
       }).join('') +
       '<div class="card" style="margin-top:14px;padding:12px 14px">' +
@@ -404,6 +405,7 @@
 
     h += '<div class="qbtns" style="margin:16px 0 8px">' +
       '<button class="btn primary" data-scuse="1">🕯️ 用这个板子开局</button>' +
+      '<a class="btn" href="#/sheet/' + esc(s.id) + '">📋 角色一览表（海报版）</a>' +
       '<button class="btn" data-sccopy="1">📋 复制板子清单</button>' +
       '<a class="btn" href="#/scripts">← 换一个板子</a>' +
       '</div>' +

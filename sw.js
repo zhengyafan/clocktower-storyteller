@@ -7,7 +7,7 @@
 var VER = 'botc-v20261103-1';
 var CORE = [
   './', 'index.html', 'styles.css', 'manifest.json',
-  'core.js', 'qrcode.js', 'qr.js', 'scripts.js', 'ability.js', 'game.js',
+  'core.js', 'qrcode.js', 'qr.js', 'scripts.js', 'sheet.js', 'ability.js', 'game.js',
   'draw.js', 'analyze.js', 'ai.js', 'qa.js', 'share.js', 'app.js',
   'icon-192.png', 'icon-512.png', 'icon-180.png', 'favicon.png'
 ];
