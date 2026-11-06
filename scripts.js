@@ -580,7 +580,7 @@
    *  对外
    * ============================================================ */
   window.BOTCScripts = {
-    build: '20261103-3',      /* 版本自检用：新增板子/功能时同步改 index.html 里的 WANT */
+    build: '20261106-1',      /* 版本自检用：新增板子/功能时同步改 index.html 里的 WANT */
     list: SCRIPTS,
     get: get,
     pickRoles: pickRoles,

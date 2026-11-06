@@ -105,7 +105,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     /* 版本自检：index.html 总是 network-first（最新），若加载到的 JS 是旧版则强制刷一次 */
     setTimeout(function () {
       try {
-        var WANT = '20261103-3';
+        var WANT = '20261106-1';
         var got = (window.BOTCScripts && BOTCScripts.build) ? BOTCScripts.build : '';
         if (got === WANT) return;
         var k = 'botc_reload_' + WANT;

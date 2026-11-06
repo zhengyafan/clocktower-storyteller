@@ -384,7 +384,11 @@
       ((r.firstNightReminder || r.otherNightReminder) ? '<dt>说书人提示</dt><dd>' +
         (r.firstNightReminder ? '<div>首夜：' + esc(r.firstNightReminder) + '</div>' : '') +
         (r.otherNightReminder ? '<div>其他夜：' + esc(r.otherNightReminder) + '</div>' : '') + '</dd>' : '') +
-      '</dl></div>';
+      '</dl></div>' +
+      (r.detail ? '<div class="card" style="margin-top:12px"><div class="sec-title"><h2>说书人判定细则（完整版）</h2>' +
+        '<span class="more">自制角色</span></div>' +
+        '<div class="ability-box">' + esc(r.detail) + '</div>' +
+        '<div class="rcfix" style="margin-top:10px"><b>速查版为官方魔典口径</b>上方卡片与打印海报使用精简能力文本；此处的完整细则用于说书人裁定争议，两者规则一致。</div></div>' : '');
 
     if (secs.length) {
       view.innerHTML += '<div class="card" style="margin-top:12px"><div class="wiki">' +
